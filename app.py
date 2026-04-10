@@ -20,70 +20,102 @@ type_colors = {
 # ====================== CSS - TCG STYLE COM MELHORIAS DE NOME ======================
 st.markdown("""
 <style>
-    .main { background: linear-gradient(180deg, #121212 0%, #1a1a2e 100%); color: #fff; }
+    .main { 
+        background: linear-gradient(180deg, #121212 0%, #1a1a2e 100%); 
+        color: #fff; 
+    }
 
     .tcg-card {
         width: 100%;
         max-width: 260px;
-        aspect-ratio: 44 / 94;           /* Ajustado para acomodar o cabeçalho maior */
+        aspect-ratio: 42 / 94;
         border-radius: 4.5% / 3.5%;
         margin: 0 auto;
-        position: relative;
         overflow: hidden;
         background: radial-gradient(circle at 50% 30%, rgba(255,255,255,0.2) 0%, transparent 60%),
                     linear-gradient(135deg, var(--type-color) 0%, #1a1a1a 100%);
-        box-shadow: 0 10px 20px rgba(0,0,0,0.5), inset 0 0 0 8px #7a7a7a, inset 0 0 0 10px #333;
-        transition: transform 0.4s ease, box-shadow 0.4s ease;
+        box-shadow: 0 10px 20px rgba(0,0,0,0.5), 
+                    inset 0 0 0 8px #7a7a7a, 
+                    inset 0 0 0 10px #333;
         display: flex;
         flex-direction: column;
         font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
     }
 
-    .tcg-card:hover {
-        transform: translateY(-12px) scale(1.04);
-        box-shadow: 0 20px 40px rgba(0,0,0,0.6), inset 0 0 0 8px #b5b5b5, inset 0 0 0 10px #333;
-    }
-
-    .tcg-header {
+   .tcg-header {
         display: flex;
         justify-content: space-between;
-        align-items: flex-start;
-        padding: 12px 12px 0 12px;
-        color: white;
-        text-shadow: 2px 2px 4px rgba(0,0,0,0.8);
-        z-index: 2;
-        flex: 0 0 auto;
+        align-items: center;
+        padding: 11px 14px 5px 14px;
+        background: var(--type-color) !important;     /* ← COR DO TIPO */
+        background-color: var(--type-color) !important;
+        color: #fff;
+        text-shadow: 1px 1px 3px rgba(0,0,0,0.8);
+        font-weight: 900;
+        border-radius: 8px 8px 0 0;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.3);
+    }
+
+    .basic {
+        font-size: 0.68rem;
+        letter-spacing: 1.5px;
+        text-transform: uppercase;
+        opacity: 0.95;
+    }
+
+    .tcg-hp {
+        font-size: 1.12rem;
+        font-weight: 900;
+        background: rgba(0, 0, 0, 0.45);
+        padding: 2px 12px;
+        border-radius: 4px;
+        white-space: nowrap;
+    }
+
+    .basic {
+        font-size: 0.65rem;
+        font-weight: 900;
+        letter-spacing: 1px;
+        text-transform: uppercase;
+        opacity: 0.9;
+    }
+
+    .tcg-hp {
+        font-size: 1.05rem;
+        font-weight: bold;
+        background: rgba(0, 0, 0, 0.55);
+        padding: 4px 12px;
+        border-radius: 6px;
+        white-space: nowrap;
     }
 
     .tcg-name {
-        font-size: 1.15rem;
+        font-size: 1.22rem;
         font-weight: 900;
         font-style: italic;
-        flex-grow: 1;
-        margin-left: 4px;
-        line-height: 1.15;
-        min-height: 50px;           /* Espaço garantido para nomes longos */
-        display: -webkit-box;
-        -webkit-line-clamp: 2;      /* Permite até 2 linhas para o nome */
-        -webkit-box-orient: vertical;
-        overflow: hidden;
+        text-align: center;
+        color: white;
+        text-shadow: 2px 2px 4px rgba(0,0,0,0.9);
+        padding: 0 12px 6px;
+        min-height: 58px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        line-height: 1.1;
         text-transform: capitalize;
     }
-
-    .tcg-hp { font-size: 1.05rem; font-weight: bold; white-space: nowrap; }
 
     .tcg-image {
         flex: 1 1 auto;
         display: flex;
         justify-content: center;
         align-items: center;
-        padding: 5px 0;
-        min-height: 0;
+        padding: 4px 0;
     }
 
     .tcg-image img {
-        width: 85%;
-        max-height: 130px;
+        width: 88%;
+        max-height: 128px;
         object-fit: contain;
         filter: drop-shadow(0px 8px 10px rgba(0,0,0,0.7));
     }
@@ -92,10 +124,8 @@ st.markdown("""
         background: linear-gradient(to bottom, rgba(255,255,255,0.92), rgba(240,240,240,0.98));
         margin: 0 8px 10px 8px;
         border-radius: 4px;
-        padding: 6px;
-        box-shadow: inset 0 0 0 2px #d4d4d4;
-        z-index: 2;
-        flex: 0 0 auto;
+        padding: 10px;
+        box-shadow: inset 0 0 0 2px #040404;
     }
 
     .type-badge {
@@ -115,7 +145,6 @@ st.markdown("""
         gap: 3px;
         font-size: 0.7rem;
         color: #222;
-        text-align: left;
         border-top: 1px solid #ccc;
         padding-top: 4px;
         margin-top: 4px;
@@ -152,7 +181,7 @@ pokemon = get_data()
 st.sidebar.header("⚙️ Configurações do Time")
 no_legendary = st.sidebar.checkbox("Sem lendários/míticos", value=True)
 max_gen = st.sidebar.slider("Máximo de geração", 1, 9, 9)
-style = st.sidebar.selectbox("Estilo do time", ["balanced", "aggressive", "defensive"])
+style = st.sidebar.selectbox("Estilo do time", ["Balanciado", "Agressivo", "Defensivo"])
 
 if st.sidebar.button("🚀 Gerar Time Otimizado", type="primary", use_container_width=True):
     with st.spinner("Otimizando seu time..."):
@@ -161,14 +190,13 @@ if st.sidebar.button("🚀 Gerar Time Otimizado", type="primary", use_container_
         st.success(f"✅ **Time gerado!** Cobertura: **{coverage}/18** tipos")
 
         st.subheader("Seu Time")
-
         cols = st.columns(6, gap="small")
 
         for idx, (_, row) in enumerate(team.iterrows()):
             color1 = type_colors.get(row['type_1'], '#FFCB05')
 
             badges = f'<span class="type-badge" style="background: {color1};">{row["type_1"]}</span>'
-            if row['type_2'] != 'None':
+            if row.get('type_2') and row['type_2'] != 'None':
                 color2 = type_colors.get(row['type_2'], '#666')
                 badges += f'<span class="type-badge" style="background: {color2};">{row["type_2"]}</span>'
 
@@ -180,34 +208,29 @@ if st.sidebar.button("🚀 Gerar Time Otimizado", type="primary", use_container_
             spe = row.get('speed', '-')
             bst = row.get('base_stat_total', '-')
 
-            # HTML do card sem identação para evitar blocos de código
             card_html = f"""
-<div class="tcg-card" style="--type-color: {color1};">
-<div class="tcg-header">
-<div style="display: flex; flex-direction: column;">
-<span style="font-size: 0.6rem; font-style: italic; opacity: 0.8;">BASIC</span>
-<div class="tcg-name">{row['name']}</div>
-</div>
-<div class="tcg-hp">HP {hp}</div>
-</div>
-<div class="tcg-image">
-<img src="{row['sprite_url']}" alt="{row['name']}">
-</div>
-<div class="tcg-body">
-<div class="tcg-badges">
-{badges}
-</div>
-<div class="tcg-stats">
-<div><span>ATK</span> <span>{atk}</span></div>
-<div><span>DEF</span> <span>{def_stat}</span></div>
-<div><span>SPA</span> <span>{spa}</span></div>
-<div><span>SPD</span> <span>{spd}</span></div>
-<div><span>SPE</span> <span>{spe}</span></div>
-<div style="background: #FFCB05; color: #000; font-weight: bold;"><span>BST</span> <span>{bst}</span></div>
-</div>
-</div>
-</div>
-"""
+            <div class="tcg-card" style="--type-color: {color1};">
+                <div class="tcg-header" style="background-color: {color1} !important;">
+                    <div class="basic">BASIC</div>
+                    <div class="tcg-hp">HP {hp}</div>
+                </div>
+                <div class="tcg-name">{row['name']}</div>
+                <div class="tcg-image">
+                    <img src="{row['sprite_url']}" alt="{row['name']}">
+                </div>
+                <div class="tcg-body">
+                    <div class="tcg-badges">{badges}</div>
+                    <div class="tcg-stats">
+                        <div><span>ATK</span><span>{atk}</span></div>
+                        <div><span>DEF</span><span>{def_stat}</span></div>
+                        <div><span>SPA</span><span>{spa}</span></div>
+                        <div><span>SPD</span><span>{spd}</span></div>
+                        <div><span>SPE</span><span>{spe}</span></div>
+                        <div style="background:#FFCB05;color:#000;font-weight:bold;"><span>BST</span><span>{bst}</span></div>
+                    </div>
+                </div>
+            </div>
+            """
             with cols[idx]:
                 st.markdown(card_html, unsafe_allow_html=True)
 
