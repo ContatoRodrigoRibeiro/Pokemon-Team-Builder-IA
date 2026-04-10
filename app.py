@@ -8,7 +8,7 @@ from src.team_optimizer import build_optimal_team
 # 1. ATIVAR MODO WIDE PARA CABEREM OS 6 CARDS
 st.set_page_config(page_title="Pokémon Team Builder IA", layout="wide")
 
-# ====================== CORES POR TIPO ======================
+# ====================== CORES POR TIPO (DEFINIÇÃO GLOBAL) ======================
 type_colors = {
     'Normal': '#A8A878', 'Fire': '#F08030', 'Water': '#6890F0', 'Grass': '#78C850',
     'Electric': '#F8D030', 'Ice': '#98D8D8', 'Fighting': '#C03028', 'Poison': '#A040A0',
@@ -17,15 +17,15 @@ type_colors = {
     'Steel': '#B8B8D0', 'Fairy': '#EE99AC'
 }
 
-# ====================== CSS - TCG STYLE ======================
+# ====================== CSS - TCG STYLE COM MELHORIAS DE NOME ======================
 st.markdown("""
 <style>
     .main { background: linear-gradient(180deg, #121212 0%, #1a1a2e 100%); color: #fff; }
 
     .tcg-card {
         width: 100%;
-        max-width: 280px; /* Aumentado para permitir cartas maiores */
-        aspect-ratio: 44 / 88;
+        max-width: 260px;
+        aspect-ratio: 44 / 94;           /* Ajustado para acomodar o cabeçalho maior */
         border-radius: 4.5% / 3.5%;
         margin: 0 auto;
         position: relative;
@@ -37,146 +37,114 @@ st.markdown("""
         display: flex;
         flex-direction: column;
         font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
-        cursor: pointer;
     }
 
     .tcg-card:hover {
-        transform: translateY(-15px) scale(1.05);
+        transform: translateY(-12px) scale(1.04);
         box-shadow: 0 20px 40px rgba(0,0,0,0.6), inset 0 0 0 8px #b5b5b5, inset 0 0 0 10px #333;
-    }
-
-    .tcg-card::after {
-        content: "";
-        position: absolute;
-        top: 0; left: 0; right: 0; bottom: 0;
-        background: linear-gradient(
-            115deg, transparent 20%, rgba(255, 255, 255, 0.5) 30%,
-            rgba(255, 255, 255, 0.6) 40%, transparent 50%,
-            rgba(255, 255, 255, 0.3) 60%, transparent 80%
-        );
-        background-size: 200% 200%;
-        mix-blend-mode: color-dodge;
-        opacity: 0;
-        transition: opacity 0.4s ease, background-position 0.5s ease;
-        pointer-events: none;
-        z-index: 10;
-    }
-
-    .tcg-card:hover::after {
-        opacity: 1;
-        background-position: 100% 100%;
     }
 
     .tcg-header {
         display: flex;
         justify-content: space-between;
-        align-items: flex-end;
-        padding: 8px 12px 0 12px;
+        align-items: flex-start;
+        padding: 12px 12px 0 12px;
         color: white;
-        text-shadow: 2px 2px 4px rgba(0,0,0,0.8), 0 0 5px var(--type-color);
+        text-shadow: 2px 2px 4px rgba(0,0,0,0.8);
         z-index: 2;
         flex: 0 0 auto;
     }
 
     .tcg-name {
-        font-size: 1.15rem; /* Fonte um pouco maior */
+        font-size: 1.15rem;
         font-weight: 900;
         font-style: italic;
         flex-grow: 1;
-        margin-left: 6px;
-        letter-spacing: 0.5px;
-        text-transform: capitalize;
-        white-space: nowrap;
+        margin-left: 4px;
+        line-height: 1.15;
+        min-height: 50px;           /* Espaço garantido para nomes longos */
+        display: -webkit-box;
+        -webkit-line-clamp: 2;      /* Permite até 2 linhas para o nome */
+        -webkit-box-orient: vertical;
         overflow: hidden;
-        text-overflow: ellipsis;
+        text-transform: capitalize;
     }
 
-    .tcg-hp { font-size: 1.05rem; font-weight: bold; }
+    .tcg-hp { font-size: 1.05rem; font-weight: bold; white-space: nowrap; }
 
     .tcg-image {
-        flex: 1 1 auto; /* Permite que a imagem preencha o espaço sem vazar */
+        flex: 1 1 auto;
         display: flex;
         justify-content: center;
         align-items: center;
-        z-index: 2;
-        padding: 5px;
-        min-height: 0; /* Crucial para o flexbox funcionar no aspect-ratio */
+        padding: 5px 0;
+        min-height: 0;
     }
 
     .tcg-image img {
-        width: 100%;
-        height: 100%;
-        max-height: 140px; /* Ajuste no tamanho da imagem */
+        width: 85%;
+        max-height: 130px;
         object-fit: contain;
-        filter: drop-shadow(0px 8px 8px rgba(0,0,0,0.7));
-        transition: transform 0.4s ease;
-    }
-
-    .tcg-card:hover .tcg-image img {
-        transform: scale(1.15) translateY(-5px);
+        filter: drop-shadow(0px 8px 10px rgba(0,0,0,0.7));
     }
 
     .tcg-body {
         background: linear-gradient(to bottom, rgba(255,255,255,0.92), rgba(240,240,240,0.98));
-        margin: 0 8px 8px 8px; /* Margem inferior reduzida */
+        margin: 0 8px 10px 8px;
         border-radius: 4px;
         padding: 6px;
-        box-shadow: inset 0 0 0 2px #d4d4d4, 0 4px 6px rgba(0,0,0,0.3);
+        box-shadow: inset 0 0 0 2px #d4d4d4;
         z-index: 2;
-        display: flex;
-        flex-direction: column;
-        justify-content: space-between;
         flex: 0 0 auto;
     }
 
     .type-badge {
         display: inline-block;
-        padding: 3px 10px;
+        padding: 2px 8px;
         border-radius: 20px;
         font-size: 0.7rem;
         font-weight: bold;
         color: white;
-        margin: 2px;
-        box-shadow: 0 2px 4px rgba(0,0,0,0.3);
-        text-shadow: 1px 1px 1px rgba(0,0,0,0.5);
+        margin: 1px;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.2);
     }
-
-    .tcg-badges { display: flex; justify-content: center; margin-bottom: 4px; }
 
     .tcg-stats {
         display: grid;
         grid-template-columns: 1fr 1fr;
         gap: 3px;
-        font-size: 0.7rem; /* Fonte um pouco maior para leitura */
+        font-size: 0.7rem;
         color: #222;
         text-align: left;
         border-top: 1px solid #ccc;
         padding-top: 4px;
+        margin-top: 4px;
     }
 
     .tcg-stats div {
-        background: rgba(0,0,0,0.05);
-        padding: 2px 4px;
+        background: rgba(0,0,0,0.04);
+        padding: 1px 4px;
         border-radius: 3px;
-        font-weight: 700;
         display: flex;
         justify-content: space-between;
     }
 
-    h1 { color: #EE1515; text-shadow: 3px 3px 0 #FFCB05; font-size: 2.7rem; }
+    h1 { 
+        color: #EE1515; 
+        text-shadow: 3px 3px 0 #FFCB05; 
+        font-size: 2.8rem;
+    }
 </style>
 """, unsafe_allow_html=True)
 
 st.title("⚔️ Pokémon Team Builder IA")
 st.markdown("**Monte o time perfeito automaticamente** usando o Ultimate Pokémon Dataset 2025")
 
-
 # Carregar dados
 @st.cache_data
 def get_data():
     df = load_pokemon_data()
     return preprocess_data(df)
-
 
 pokemon = get_data()
 
@@ -194,7 +162,6 @@ if st.sidebar.button("🚀 Gerar Time Otimizado", type="primary", use_container_
 
         st.subheader("Seu Time")
 
-        # Uso de gap="small" para dar mais largura disponível para cada carta
         cols = st.columns(6, gap="small")
 
         for idx, (_, row) in enumerate(team.iterrows()):
@@ -213,12 +180,14 @@ if st.sidebar.button("🚀 Gerar Time Otimizado", type="primary", use_container_
             spe = row.get('speed', '-')
             bst = row.get('base_stat_total', '-')
 
-            # HTML do card
+            # HTML do card sem identação para evitar blocos de código
             card_html = f"""
 <div class="tcg-card" style="--type-color: {color1};">
 <div class="tcg-header">
-<span style="font-size: 0.65rem; font-style: italic; opacity: 0.8; margin-bottom: 3px;">BASIC</span>
+<div style="display: flex; flex-direction: column;">
+<span style="font-size: 0.6rem; font-style: italic; opacity: 0.8;">BASIC</span>
 <div class="tcg-name">{row['name']}</div>
+</div>
 <div class="tcg-hp">HP {hp}</div>
 </div>
 <div class="tcg-image">
@@ -234,7 +203,7 @@ if st.sidebar.button("🚀 Gerar Time Otimizado", type="primary", use_container_
 <div><span>SPA</span> <span>{spa}</span></div>
 <div><span>SPD</span> <span>{spd}</span></div>
 <div><span>SPE</span> <span>{spe}</span></div>
-<div style="background: #FFCB05; color: #000;"><span>BST</span> <span>{bst}</span></div>
+<div style="background: #FFCB05; color: #000; font-weight: bold;"><span>BST</span> <span>{bst}</span></div>
 </div>
 </div>
 </div>
