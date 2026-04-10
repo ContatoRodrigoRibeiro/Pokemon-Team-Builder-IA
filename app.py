@@ -47,13 +47,10 @@ st.markdown("""
         justify-content: space-between;
         align-items: center;
         padding: 11px 14px 5px 14px;
-        background: var(--type-color) !important;     /* ← COR DO TIPO */
-        background-color: var(--type-color) !important;
         color: #fff;
         text-shadow: 1px 1px 3px rgba(0,0,0,0.8);
         font-weight: 900;
         border-radius: 8px 8px 0 0;
-        box-shadow: 0 2px 4px rgba(0,0,0,0.3);
     }
 
     .basic {
@@ -193,11 +190,12 @@ if st.sidebar.button("🚀 Gerar Time Otimizado", type="primary", use_container_
         cols = st.columns(6, gap="small")
 
         for idx, (_, row) in enumerate(team.iterrows()):
-            color1 = type_colors.get(row['type_1'], '#FFCB05')
+            color1 = type_colors.get(row.get('type_1'), '#FFCB05')
 
-            badges = f'<span class="type-badge" style="background: {color1};">{row["type_1"]}</span>'
-            if row.get('type_2') and row['type_2'] != 'None':
-                color2 = type_colors.get(row['type_2'], '#666')
+            # Badges dos tipos
+            badges = f'<span class="type-badge" style="background: {color1};">{row.get("type_1", "")}</span>'
+            if row.get('type_2') and str(row['type_2']).lower() not in ['none', 'nan', '']:
+                color2 = type_colors.get(row['type_2'], '#666666')
                 badges += f'<span class="type-badge" style="background: {color2};">{row["type_2"]}</span>'
 
             hp = row.get('hp', '-')
@@ -208,29 +206,47 @@ if st.sidebar.button("🚀 Gerar Time Otimizado", type="primary", use_container_
             spe = row.get('speed', '-')
             bst = row.get('base_stat_total', '-')
 
+            # ====================== CARD HTML ======================
+            color1 = type_colors.get(str(row.get('type_1', '')).capitalize(), '#FFCB05')
+
+            badges = f'<span class="type-badge" style="background: {color1};">{row.get("type_1", "")}</span>'
+            if row.get('type_2') and str(row.get('type_2', '')).lower() not in ['none', 'nan', '']:
+                color2 = type_colors.get(str(row.get('type_2', '')).capitalize(), '#666666')
+                badges += f'<span class="type-badge" style="background: {color2};">{row.get("type_2", "")}</span>'
+
+            hp = row.get('hp', '-')
+            atk = row.get('attack', '-')
+            def_stat = row.get('defense', '-')
+            spa = row.get('sp_attack', '-')
+            spd = row.get('sp_defense', '-')
+            spe = row.get('speed', '-')
+            bst = row.get('base_stat_total', '-')
+
             card_html = f"""
-            <div class="tcg-card" style="--type-color: {color1};">
-                <div class="tcg-header" style="background-color: {color1} !important;">
-                    <div class="basic">BASIC</div>
-                    <div class="tcg-hp">HP {hp}</div>
-                </div>
-                <div class="tcg-name">{row['name']}</div>
-                <div class="tcg-image">
-                    <img src="{row['sprite_url']}" alt="{row['name']}">
-                </div>
-                <div class="tcg-body">
-                    <div class="tcg-badges">{badges}</div>
-                    <div class="tcg-stats">
-                        <div><span>ATK</span><span>{atk}</span></div>
-                        <div><span>DEF</span><span>{def_stat}</span></div>
-                        <div><span>SPA</span><span>{spa}</span></div>
-                        <div><span>SPD</span><span>{spd}</span></div>
-                        <div><span>SPE</span><span>{spe}</span></div>
-                        <div style="background:#FFCB05;color:#000;font-weight:bold;"><span>BST</span><span>{bst}</span></div>
-                    </div>
-                </div>
-            </div>
-            """
+                        <div class="tcg-card" style="--type-color: {color1};">
+                            <div class="tcg-header" style="background-color: {color1} !important;">
+                                <div class="basic">BASIC</div>
+                                <div class="tcg-hp">HP {hp}</div>
+                            </div>
+                            <div class="tcg-name">{row['name']}</div>
+                            <div class="tcg-image">
+                                <img src="{row['sprite_url']}" alt="{row['name']}">
+                            </div>
+                            <div class="tcg-body">
+                                <div class="tcg-badges">{badges}</div>
+                                <div class="tcg-stats">
+                                    <div><span>ATK</span><span>{atk}</span></div>
+                                    <div><span>DEF</span><span>{def_stat}</span></div>
+                                    <div><span>SPA</span><span>{spa}</span></div>
+                                    <div><span>SPD</span><span>{spd}</span></div>
+                                    <div><span>SPE</span><span>{spe}</span></div>
+                                    <div style="background:#FFCB05;color:#000;font-weight:bold;">
+                                        <span>BST</span><span>{bst}</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        """
             with cols[idx]:
                 st.markdown(card_html, unsafe_allow_html=True)
 
