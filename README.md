@@ -23,7 +23,7 @@ Uma ferramenta inteligente que usa IA para criar, analisar e otimizar times comp
 
 ## 📸 Demonstração
 
-<!-- Adicione aqui prints ou GIFs do projeto -->
+![Tela de geração de time](./1.png)
 
 ## 🛠️ Tecnologias Utilizadas
 
