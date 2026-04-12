@@ -31,7 +31,6 @@ Uma ferramenta inteligente que usa IA para criar, analisar e otimizar times comp
 |--------------|-------------------------------------|
 | Frontend     | Next.js + React + TailwindCSS       |
 | Backend      | [Node.js / Python Flask / FastAPI] |
-| IA           | [Groq + Llama / OpenAI / Modelo customizado] |
 | Dados Pokémon| PokeAPI + Smogon + dados do meta    |
 | Hospedagem   | Vercel / Railway / Render           |
 
