@@ -1,7 +1,5 @@
-pandas
-numpy
-pulp
-streamlit
-plotly
-seaborn
-matplotlib
+streamlit==1.42.0
+pydantic==2.10.6
+requests==2.32.3
+python-dotenv==1.0.1
+pandas==2.2.3
