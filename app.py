@@ -129,12 +129,12 @@ with tab1:
                             st.error("❌ Pokémon não encontrado.")
                             st.stop()
                     if st.session_state.current_team.add_pokemon(pkm):
-                        st.success(f"✅ {pkm.name} adicionado!")
+                        st.success(f"✅ {pkm.name} adicionado ao time!")
                         st.rerun()
                     else:
-                        st.error("❌ Time completo!")
+                        st.error("❌ Time completo! (máximo 6 Pokémon)")
                 except Exception as e:
-                    st.error(f"Erro: {e}")
+                    st.error(f"Erro ao buscar Pokémon: {e}")
 
     with col_time:
         st.subheader("Seu Time Atual")
@@ -147,13 +147,13 @@ with tab1:
                         if pkm.sprite: st.image(pkm.sprite, width=90)
                     with cols[1]:
                         st.markdown(f"**{pkm.name}**")
-                        st.caption(f"Tipos: {', '.join(t.value for t in pkm.types) if pkm.types else '—'}")
+                        st.caption(f"Tipos: {', '.join(t.value for t in pkm.types) if pkm.types else '—'} | Gen {pkm.generation}")
                     with cols[2]:
                         if st.button("🗑️", key=f"remove_{i}"):
                             team.remove_pokemon(i)
                             st.rerun()
         else:
-            st.info("Time vazio.")
+            st.info("Time vazio. Adicione Pokémon acima.")
 
 with tab2:
     st.header("🔬 Análise Avançada do Time")
@@ -230,7 +230,6 @@ with tab3:
         st.warning("Adicione Pokémon para ver recomendações.")
     else:
         st.subheader("🔥 Sugestões para cobrir fraquezas do time")
-
         weaknesses_list = []
         for attack_type in Type:
             multiplier = 1.0
@@ -247,8 +246,7 @@ with tab3:
             recommended_counters = []
             for weak_type in weaknesses_list[:3]:
                 for pkm in st.session_state.full_pokedex:
-                    if len(recommended_counters) >= 6:
-                        break
+                    if len(recommended_counters) >= 6: break
                     resists = any(t.value in type_chart.get(weak_type, {}) and type_chart[weak_type][t.value] <= 0.5 for t in pkm.types)
                     if resists and pkm not in recommended_counters:
                         recommended_counters.append(pkm)
@@ -258,8 +256,7 @@ with tab3:
                     with st.container(border=True):
                         col_img, col_info = st.columns([1, 4])
                         with col_img:
-                            if pkm.sprite:
-                                st.image(pkm.sprite, width=80)
+                            if pkm.sprite: st.image(pkm.sprite, width=80)
                         with col_info:
                             st.markdown(f"**{pkm.name}** (Gen {pkm.generation})")
                             st.caption(f"Tipos: {', '.join(t.value for t in pkm.types)}")
@@ -284,8 +281,7 @@ with tab3:
             with st.container(border=True):
                 col_img, col_rec = st.columns([1, 4])
                 with col_img:
-                    if pkm.sprite:
-                        st.image(pkm.sprite, width=110)
+                    if pkm.sprite: st.image(pkm.sprite, width=110)
                 with col_rec:
                     sug = suggestions_db.get(pkm.name, {
                         "ability": pkm.abilities[0] if pkm.abilities else "Hidden Ability",
@@ -305,10 +301,10 @@ with tab3:
 
 with tab4:
     st.header("🤖 Gerar Time Completo com IA")
-    st.caption("Filtro de geração agora é FORTE (Gen 1 usa ID 1-151 + coluna do CSV)")
+    st.caption("Filtro de geração agora é FORTE (Gen 1 usa ID 1-151)")
 
     user_prompt = st.text_area(
-        "Descreva o time (ex: time gen 1 tipo fogo, geração 3 tipo água, kanto fogo...)",
+        "Descreva o time (ex: time gen 1 tipo fogo)",
         placeholder="time gen 1 tipo fogo",
         height=100
     )
@@ -325,7 +321,7 @@ with tab4:
             prompt = user_prompt.lower()
             filtered = st.session_state.full_pokedex.copy()
 
-            # ==================== FILTRO DE GERAÇÃO (MUITO FORTE) ====================
+            # Filtro de Geração - AGORA MUITO FORTE
             gen_filter = None
             gen_keywords = {
                 1: ["gen 1", "gen1", "kanto", "primeira", "1ª", "geração 1", "geracao 1"],
@@ -345,32 +341,21 @@ with tab4:
 
             if gen_filter:
                 if gen_filter == 1:
-                    # FILTRO DURO POR ID para Gen 1 (impossível escapar)
-                    filtered = [p for p in filtered if p.id <= 151]
+                    filtered = [p for p in filtered if p.id <= 151]   # FILTRO DURO POR ID
                 else:
-                    # Para outras gerações usa coluna + range de ID
                     filtered = [p for p in filtered if p.generation == gen_filter]
 
-            # ==================== FILTRO DE TIPO ====================
+            # Filtro de Tipo
             type_map = {
-                "fogo": "Fire", "fire": "Fire",
-                "agua": "Water", "água": "Water", "water": "Water",
-                "grama": "Grass", "grass": "Grass",
-                "eletrico": "Electric", "elétrico": "Electric", "electric": "Electric",
-                "gelo": "Ice", "ice": "Ice",
-                "lutador": "Fighting", "luta": "Fighting", "fighting": "Fighting",
-                "veneno": "Poison", "poison": "Poison",
-                "terra": "Ground", "ground": "Ground",
-                "voador": "Flying", "flying": "Flying",
-                "psiquico": "Psychic", "psíquico": "Psychic", "psychic": "Psychic",
-                "inseto": "Bug", "bug": "Bug",
-                "rocha": "Rock", "rock": "Rock",
-                "fantasma": "Ghost", "ghost": "Ghost",
-                "dragao": "Dragon", "dragão": "Dragon", "dragon": "Dragon",
-                "sombrio": "Dark", "dark": "Dark",
-                "fada": "Fairy", "fairy": "Fairy",
-                "aço": "Steel", "steel": "Steel",
-                "normal": "Normal"
+                "fogo": "Fire", "fire": "Fire", "água": "Water", "agua": "Water", "water": "Water",
+                "grama": "Grass", "grass": "Grass", "eletrico": "Electric", "elétrico": "Electric",
+                "gelo": "Ice", "ice": "Ice", "lutador": "Fighting", "luta": "Fighting",
+                "veneno": "Poison", "poison": "Poison", "terra": "Ground", "ground": "Ground",
+                "voador": "Flying", "flying": "Flying", "psiquico": "Psychic", "psíquico": "Psychic",
+                "inseto": "Bug", "bug": "Bug", "rocha": "Rock", "rock": "Rock",
+                "fantasma": "Ghost", "ghost": "Ghost", "dragão": "Dragon", "dragon": "Dragon",
+                "sombrio": "Dark", "dark": "Dark", "fada": "Fairy", "fairy": "Fairy",
+                "aço": "Steel", "steel": "Steel", "normal": "Normal"
             }
             single_type = None
             for pt, en in type_map.items():
@@ -381,12 +366,12 @@ with tab4:
                 filtered = [p for p in filtered if any(t.value == single_type for t in p.types)]
 
             if len(filtered) < 6:
-                st.error(f"❌ Só encontrei {len(filtered)} Pokémon com esses filtros. Tente outro prompt.")
+                st.error(f"❌ Só encontrei {len(filtered)} Pokémon com esses filtros.")
                 st.stop()
 
             generated = random.sample(filtered, 6)
             st.session_state.last_generated_team = generated
-            st.success(f"✅ Time gerado! (Geração {gen_filter or 'qualquer'} + tipo aplicado)")
+            st.success(f"✅ Time gerado! (Geração {gen_filter or 'qualquer'})")
 
             st.subheader("Seu time gerado pela IA")
             for idx, pkm in enumerate(generated):
@@ -403,17 +388,14 @@ with tab4:
                 with st.container(border=True):
                     cols = st.columns([1, 4, 2])
                     with cols[0]:
-                        if sprite_url:
-                            st.image(sprite_url, width=90)
-                        else:
-                            st.write("🖼️")
+                        if sprite_url: st.image(sprite_url, width=90)
                     with cols[1]:
                         st.markdown(f"**{pkm.name}**")
                         st.caption(f"Tipos: {', '.join(t.value for t in pkm.types) if pkm.types else '—'} | Gen {pkm.generation}")
                     with cols[2]:
                         if st.button("➕ Adicionar ao meu time", key=f"add_ia_{idx}_{pkm.name}"):
                             if st.session_state.current_team.add_pokemon(pkm):
-                                st.success(f"✅ {pkm.name} adicionado ao time!")
+                                st.success(f"✅ {pkm.name} adicionado!")
                                 st.rerun()
 
 with tab5:
@@ -437,4 +419,4 @@ if team.pokemon:
 else:
     st.info("Adicione Pokémon para exportar.")
 
-st.caption("✅ Filtro de geração agora é MUITO FORTE (Gen 1 usa ID 1-151)")
+st.caption("✅ Gen 1 agora usa filtro por ID (1-151) + correção do botão de adicionar no Modo Manual")
