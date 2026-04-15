@@ -1,5 +1,8 @@
 import sys
-sys.path.insert(0, ".")
+from pathlib import Path
+
+# === CORREÇÃO DE CAMINHO PARA STREAMLIT CLOUD ===
+sys.path.insert(0, str(Path(__file__).parent.absolute()))
 
 import streamlit as st
 import pandas as pd
@@ -301,10 +304,10 @@ with tab3:
 
 with tab4:
     st.header("🤖 Gerar Time Completo com IA")
-    st.caption("Filtro de geração agora é FORTE (Gen 1 usa ID 1-151)")
+    st.caption("Gen 1 agora é filtrado por ID (1-151) – impossível aparecer Pokémon errado")
 
     user_prompt = st.text_area(
-        "Descreva o time (ex: time gen 1 tipo fogo)",
+        "Descreva o time",
         placeholder="time gen 1 tipo fogo",
         height=100
     )
@@ -317,11 +320,11 @@ with tab4:
             st.error("Digite uma descrição!")
             st.stop()
 
-        with st.spinner("🔍 IA analisando geração e tipo..."):
+        with st.spinner("🔍 IA analisando..."):
             prompt = user_prompt.lower()
             filtered = st.session_state.full_pokedex.copy()
 
-            # Filtro de Geração - AGORA MUITO FORTE
+            # Filtro de Geração
             gen_filter = None
             gen_keywords = {
                 1: ["gen 1", "gen1", "kanto", "primeira", "1ª", "geração 1", "geracao 1"],
@@ -419,4 +422,4 @@ if team.pokemon:
 else:
     st.info("Adicione Pokémon para exportar.")
 
-st.caption("✅ Gen 1 agora usa filtro por ID (1-151) + correção do botão de adicionar no Modo Manual")
+st.caption("✅ Caminho corrigido + Gen 1 filtrado por ID (1-151)")
