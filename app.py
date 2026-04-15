@@ -37,19 +37,19 @@ def get_generation_by_id(pkm_id):
 
 if "full_pokedex" not in st.session_state:
     try:
-        # === MUDANÇA PARA O ARQUIVO LIMPO ===
+        # === ARQUIVO LIMPO EM PORTUGUÊS ===
         df = pd.read_csv("data/pokemon_cleaned_pt.csv")
         st.session_state.full_pokedex = []
 
         for _, row in df.iterrows():
             types = []
-            for col in ["type1", "Type 1", "type_1", "Type1"]:
+            for col in ["type1", "Type 1", "type_1", "Type1", "tipo1", "Tipo 1", "tipo_1"]:
                 if col in row and pd.notna(row[col]):
                     t = str(row[col]).title().strip()
                     if t and t != "Nan":
                         types.append(Type(t))
                         break
-            for col in ["type2", "Type 2", "type_2", "Type2"]:
+            for col in ["type2", "Type 2", "type_2", "Type2", "tipo2", "Tipo 2", "tipo_2"]:
                 if col in row and pd.notna(row[col]):
                     t = str(row[col]).title().strip()
                     if t and t != "Nan" and t not in [tp.value for tp in types]:
@@ -67,18 +67,25 @@ if "full_pokedex" not in st.session_state:
                 if col in row and pd.notna(row[col]):
                     abilities.extend([a.strip().title() for a in str(row[col]).split(",") if a.strip()])
 
+            # === COLUNA DO NOME (aceita "name" ou "nome") ===
+            nome = ""
+            for col_name in ["name", "Name", "nome", "Nome", "pokemon", "Pokémon", "Pokemon"]:
+                if col_name in row and pd.notna(row[col_name]):
+                    nome = str(row[col_name]).strip()
+                    break
+
             pkm = Pokemon(
-                id=int(row.get("id", 0)),
-                name=str(row["name"]).replace("-", " ").title(),
+                id=int(row.get("id", row.get("ID", row.get("#", 0)))),
+                name=nome.replace("-", " ").title(),
                 types=types,
                 abilities=list(dict.fromkeys(abilities)),
                 base_stats={},
                 sprite=sprite
             )
 
-            # Lê a coluna generation do arquivo limpo
+            # Geração (coluna do CSV limpo)
             generation = None
-            for col_name in ["generation", "Generation", "gen", "Gen", "generation_number"]:
+            for col_name in ["generation", "Generation", "gen", "Gen", "geracao", "Geração", "generation_number"]:
                 if col_name in row and pd.notna(row[col_name]):
                     try:
                         generation = int(row[col_name])
@@ -91,7 +98,7 @@ if "full_pokedex" not in st.session_state:
             pkm.generation = generation
             st.session_state.full_pokedex.append(pkm)
 
-        st.success(f"✅ {len(st.session_state.full_pokedex)} Pokémon carregados do arquivo limpo!")
+        st.success(f"✅ {len(st.session_state.full_pokedex)} Pokémon carregados do pokemon_cleaned_pt.csv!")
     except Exception as e:
         st.error(f"Erro ao carregar pokemon_cleaned_pt.csv: {e}")
         st.session_state.full_pokedex = []
@@ -160,11 +167,9 @@ with tab1:
         else:
             st.info("Time vazio. Adicione Pokémon acima.")
 
-# (as abas 2, 3 e 5 permanecem iguais - não mudei nada nelas)
-
 with tab4:
     st.header("🤖 Gerar Time Completo com IA")
-    st.caption("Usando pokemon_cleaned_pt.csv + filtro FORTE por ID para Gen 1")
+    st.caption("Usando pokemon_cleaned_pt.csv + Gen 1 filtrado por ID (1-151)")
 
     user_prompt = st.text_area(
         "Descreva o time",
@@ -184,7 +189,6 @@ with tab4:
             prompt = user_prompt.lower()
             filtered = st.session_state.full_pokedex.copy()
 
-            # Filtro de Geração
             gen_filter = None
             gen_keywords = {
                 1: ["gen 1", "gen1", "kanto", "primeira", "1ª", "geração 1", "geracao 1"],
@@ -204,11 +208,10 @@ with tab4:
 
             if gen_filter:
                 if gen_filter == 1:
-                    filtered = [p for p in filtered if p.id <= 151]   # FILTRO DURO
+                    filtered = [p for p in filtered if p.id <= 151]
                 else:
                     filtered = [p for p in filtered if p.generation == gen_filter]
 
-            # Filtro de Tipo
             type_map = {
                 "fogo": "Fire", "fire": "Fire", "água": "Water", "agua": "Water", "water": "Water",
                 "grama": "Grass", "grass": "Grass", "eletrico": "Electric", "elétrico": "Electric",
@@ -261,7 +264,7 @@ with tab4:
                                 st.success(f"✅ {pkm.name} adicionado!")
                                 st.rerun()
 
-# (tab2, tab3 e tab5 mantidos iguais - sem mudanças)
+# (as outras abas 2, 3 e 5 continuam iguais - não precisam de mudança)
 
 st.divider()
 st.subheader("📤 Exportação Rápida")
@@ -280,4 +283,4 @@ if team.pokemon:
 else:
     st.info("Adicione Pokémon para exportar.")
 
-st.caption("✅ Agora usando pokemon_cleaned_pt.csv + Gen 1 filtrado por ID")
+st.caption("✅ Usando pokemon_cleaned_pt.csv + Gen 1 filtrado por ID")
