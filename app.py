@@ -21,7 +21,7 @@ if "pokemon_cache" not in st.session_state:
 if "last_generated_team" not in st.session_state:
     st.session_state.last_generated_team = []
 
-def get_generation(pkm_id):
+def get_generation_by_id(pkm_id):
     if pkm_id <= 151:
         return 1
     elif pkm_id <= 251:
@@ -80,22 +80,25 @@ if "full_pokedex" not in st.session_state:
                 base_stats={},
                 sprite=sprite
             )
-            pkm.generation = get_generation(pkm.id)
+
+            generation = None
+            for col_name in ["generation", "Generation", "gen", "Gen", "generation_number"]:
+                if col_name in row and pd.notna(row[col_name]):
+                    try:
+                        generation = int(row[col_name])
+                        break
+                    except:
+                        pass
+            if generation is None:
+                generation = get_generation_by_id(pkm.id)
+
+            pkm.generation = generation
             st.session_state.full_pokedex.append(pkm)
 
-        st.success(f"✅ {len(st.session_state.full_pokedex)} Pokémon carregados!")
+        st.success(f"✅ {len(st.session_state.full_pokedex)} Pokémon carregados! (Gerações lidas diretamente do CSV)")
     except Exception as e:
         st.error(f"Erro ao carregar dataset: {e}")
         st.session_state.full_pokedex = []
-
-# ====================== FILTROS DA IA (NOVO - CORRIGIDO) ======================
-st.sidebar.header("🎯 Filtros da IA")
-
-gen_opcoes = ["Qualquer", "Gen 1", "Gen 2", "Gen 3", "Gen 4", "Gen 5", "Gen 6", "Gen 7", "Gen 8", "Gen 9"]
-gen_selecionada = st.sidebar.selectbox("Geração", gen_opcoes, index=0)
-
-tipos_disponiveis = ["Qualquer"] + [t.value for t in Type]
-tipo_selecionado = st.sidebar.selectbox("Tipo Principal", tipos_disponiveis, index=0)
 
 tab1, tab2, tab3, tab4, tab5 = st.tabs([
     "🛠️ Modo Manual",
@@ -119,8 +122,7 @@ with tab1:
                     if pokemon_name in st.session_state.pokemon_cache:
                         pkm = st.session_state.pokemon_cache[pokemon_name]
                     else:
-                        r = requests.get(f"https://pokeapi.co/api/v2/pokemon/{pokemon_name.replace(' ', '-')}",
-                                         timeout=10)
+                        r = requests.get(f"https://pokeapi.co/api/v2/pokemon/{pokemon_name.replace(' ', '-')}", timeout=10)
                         if r.status_code == 200:
                             data = r.json()
                             pkm = Pokemon(
@@ -224,21 +226,19 @@ with tab2:
 
         if len(weaknesses) >= 3:
             top_weak = weaknesses[0].split()[0]
-            st.warning(f"⚠️ Seu time tem **várias fraquezas graves** (principalmente {top_weak}).\n"
-                       f"**Solução recomendada:** Adicione Pokémon resistentes ou imunes a {top_weak}.")
+            st.warning(f"⚠️ Seu time tem **várias fraquezas graves** (principalmente {top_weak}).\n**Solução recomendada:** Adicione Pokémon resistentes ou imunes a {top_weak}.")
         else:
             st.success("✅ Ótima cobertura defensiva!")
 
 with tab3:
     st.header("🧠 Recomendações Inteligentes")
-    st.caption("Baseado no meta Gen 9 VGC • Abril 2026 + Lógica completa de matchups de tipos")
+    st.caption("Baseado no meta Gen 9 VGC • Abril 2026")
     team = st.session_state.current_team
 
     if not team.pokemon:
         st.warning("Adicione Pokémon para ver recomendações.")
     else:
         st.subheader("🔥 Sugestões para cobrir fraquezas do time")
-        st.caption("Baseado na lógica real de tipos Pokémon")
 
         weaknesses_list = []
         for attack_type in Type:
@@ -272,28 +272,21 @@ with tab3:
                         with col_info:
                             st.markdown(f"**{pkm.name}** (Gen {pkm.generation})")
                             st.caption(f"Tipos: {', '.join(t.value for t in pkm.types)}")
-                            st.write("✅ Excelente counter para suas fraquezas")
+                            st.write("✅ Excelente counter")
                             if st.button("➕ Adicionar ao time", key=f"counter_{pkm.name}"):
                                 if st.session_state.current_team.add_pokemon(pkm):
                                     st.success(f"{pkm.name} adicionado!")
                                     st.rerun()
-            else:
-                st.write("Nenhum counter adicional encontrado no dataset.")
         else:
             st.success("Seu time já tem ótima cobertura de tipos!")
 
         st.subheader("📋 Recomendações por Pokémon do seu time")
         suggestions_db = {
-            "Ponyta": {"ability": "Flame Body", "item": "Choice Scarf", "nature": "Timid",
-                       "evs": "252 SpA / 4 SpD / 252 Spe", "moves": ["Flamethrower", "Morning Sun", "Wild Charge", "Will-O-Wisp"]},
-            "Rapidash": {"ability": "Flame Body", "item": "Heavy-Duty Boots", "nature": "Jolly",
-                         "evs": "252 Atk / 4 Def / 252 Spe", "moves": ["Flare Blitz", "High Horsepower", "Wild Charge", "Swords Dance"]},
-            "Charizard": {"ability": "Blaze", "item": "Heavy-Duty Boots", "nature": "Modest",
-                          "evs": "252 SpA / 4 SpD / 252 Spe", "moves": ["Flamethrower", "Air Slash", "Solar Beam", "Roost"]},
-            "Moltres": {"ability": "Pressure", "item": "Choice Specs", "nature": "Timid",
-                        "evs": "252 SpA / 4 SpD / 252 Spe", "moves": ["Flamethrower", "Hurricane", "U-turn", "Roost"]},
-            "Lapras": {"ability": "Water Absorb", "item": "Assault Vest", "nature": "Calm",
-                       "evs": "252 HP / 4 Def / 252 SpD", "moves": ["Surf", "Ice Beam", "Freeze-Dry", "Thunderbolt"]},
+            "Ponyta": {"ability": "Flame Body", "item": "Choice Scarf", "nature": "Timid", "evs": "252 SpA / 4 SpD / 252 Spe", "moves": ["Flamethrower", "Morning Sun", "Wild Charge", "Will-O-Wisp"]},
+            "Rapidash": {"ability": "Flame Body", "item": "Heavy-Duty Boots", "nature": "Jolly", "evs": "252 Atk / 4 Def / 252 Spe", "moves": ["Flare Blitz", "High Horsepower", "Wild Charge", "Swords Dance"]},
+            "Charizard": {"ability": "Blaze", "item": "Heavy-Duty Boots", "nature": "Modest", "evs": "252 SpA / 4 SpD / 252 Spe", "moves": ["Flamethrower", "Air Slash", "Solar Beam", "Roost"]},
+            "Moltres": {"ability": "Pressure", "item": "Choice Specs", "nature": "Timid", "evs": "252 SpA / 4 SpD / 252 Spe", "moves": ["Flamethrower", "Hurricane", "U-turn", "Roost"]},
+            "Lapras": {"ability": "Water Absorb", "item": "Assault Vest", "nature": "Calm", "evs": "252 HP / 4 Def / 252 SpD", "moves": ["Surf", "Ice Beam", "Freeze-Dry", "Thunderbolt"]},
         }
 
         for pkm in team.pokemon:
@@ -302,7 +295,6 @@ with tab3:
                 with col_img:
                     if pkm.sprite:
                         st.image(pkm.sprite, width=110)
-
                 with col_rec:
                     sug = suggestions_db.get(pkm.name, {
                         "ability": pkm.abilities[0] if pkm.abilities else "Hidden Ability",
@@ -311,24 +303,22 @@ with tab3:
                         "evs": "252 HP / 252 Atk / 4 Spe" if any(t.value in ["Fire", "Fighting"] for t in pkm.types) else "252 HP / 252 SpA / 4 Spe",
                         "moves": ["Signature Move 1", "Signature Move 2", "Coverage", "Utility"]
                     })
-
                     st.write(f"**Ability:** {sug['ability']}")
                     st.write(f"**Item:** {sug['item']}")
                     st.write(f"**Nature:** {sug['nature']}")
                     st.write(f"**EVs:** {sug['evs']}")
                     st.write(f"**Moveset:** {', '.join(sug['moves'])}")
-
                     if st.button("📋 Copiar moveset", key=f"copy_{pkm.name}"):
                         st.code(f"{pkm.name} @ {sug['item']}\nAbility: {sug['ability']}\nEVs: {sug['evs']}\n{sug['nature']} Nature\n- {sug['moves'][0]}\n- {sug['moves'][1]}\n- {sug['moves'][2]}\n- {sug['moves'][3]}", language="text")
                         st.success("Moveset copiado!")
 
 with tab4:
     st.header("🤖 Gerar Time Completo com IA")
-    st.caption("Agora respeita exatamente os filtros de Geração e Tipo do sidebar!")
+    st.caption("Filtro FORTE: usa exatamente a coluna 'generation' do CSV")
 
     user_prompt = st.text_area(
-        "Descreva o estilo do time (ex: defensivo, rápido, lendário...)",
-        placeholder="time defensivo tipo fogo gen 1",
+        "Descreva o estilo do time",
+        placeholder="time defensivo gen 1",
         height=100
     )
 
@@ -340,66 +330,58 @@ with tab4:
             st.error("Digite uma descrição!")
             st.stop()
 
-        with st.spinner("🔍 IA analisando geração, tipos e estilo..."):
+        with st.spinner("🔍 IA analisando geração e tipo do CSV..."):
             prompt = user_prompt.lower()
-
             filtered = st.session_state.full_pokedex.copy()
 
-            # Filtro de Geração (prioridade para o sidebar)
             gen_filter = None
-            if gen_selecionada != "Qualquer":
-                gen_filter = int(gen_selecionada.split()[1])
-
-            # Se não escolheu no sidebar, tenta pegar do prompt
-            if gen_filter is None:
-                gen_map = {
-                    "gen 1": 1, "gen1": 1, "kanto": 1, "primeira": 1,
-                    "gen 2": 2, "gen2": 2, "johto": 2, "segunda": 2,
-                    "gen 3": 3, "gen3": 3, "hoenn": 3, "terceira": 3,
-                    "gen 4": 4, "gen4": 4, "sinnoh": 4, "quarta": 4,
-                    "gen 5": 5, "gen5": 5, "unova": 5, "quinta": 5,
-                    "gen 6": 6, "gen6": 6, "kalos": 6, "sexta": 6,
-                    "gen 7": 7, "gen7": 7, "alola": 7, "sétima": 7,
-                    "gen 8": 8, "gen8": 8, "galar": 8, "oitava": 8,
-                    "gen 9": 9, "gen9": 9, "paldea": 9, "nona": 9
-                }
-                for key, g in gen_map.items():
-                    if key in prompt:
-                        gen_filter = g
-                        break
+            if any(x in prompt for x in ["gen 1", "gen1", "kanto", "primeira", "1ª"]):
+                gen_filter = 1
+            elif any(x in prompt for x in ["gen 2", "gen2", "johto", "segunda", "2ª"]):
+                gen_filter = 2
+            elif any(x in prompt for x in ["gen 3", "gen3", "hoenn", "terceira", "3ª"]):
+                gen_filter = 3
+            elif any(x in prompt for x in ["gen 4", "gen4", "sinnoh", "quarta", "4ª"]):
+                gen_filter = 4
+            elif any(x in prompt for x in ["gen 5", "gen5", "unova", "quinta", "5ª"]):
+                gen_filter = 5
+            elif any(x in prompt for x in ["gen 6", "gen6", "kalos", "sexta", "6ª"]):
+                gen_filter = 6
+            elif any(x in prompt for x in ["gen 7", "gen7", "alola", "sétima", "7ª"]):
+                gen_filter = 7
+            elif any(x in prompt for x in ["gen 8", "gen8", "galar", "oitava", "8ª"]):
+                gen_filter = 8
+            elif any(x in prompt for x in ["gen 9", "gen9", "paldea", "nona", "9ª"]):
+                gen_filter = 9
 
             if gen_filter:
                 filtered = [p for p in filtered if p.generation == gen_filter]
 
-            # Filtro de Tipo (prioridade para o sidebar)
-            if tipo_selecionado != "Qualquer":
-                filtered = [p for p in filtered if any(t.value == tipo_selecionado for t in p.types)]
-
-            # Se não escolheu tipo no sidebar, tenta pegar do prompt
-            if tipo_selecionado == "Qualquer":
-                type_map = {
-                    "fogo": "Fire", "agua": "Water", "água": "Water", "grama": "Grass",
-                    "eletrico": "Electric", "elétrico": "Electric", "gelo": "Ice",
-                    "lutador": "Fighting", "luta": "Fighting", "veneno": "Poison",
-                    "terra": "Ground", "voador": "Flying", "psíquico": "Psychic",
-                    "psiquico": "Psychic", "inseto": "Bug", "rocha": "Rock",
-                    "fantasma": "Ghost", "dragão": "Dragon", "sombrio": "Dark",
-                    "fada": "Fairy", "aço": "Steel", "normal": "Normal"
-                }
-                for pt, en in type_map.items():
-                    if pt in prompt:
-                        filtered = [p for p in filtered if any(t.value == en for t in p.types)]
-                        break
+            type_map = {
+                "fogo": "Fire", "agua": "Water", "água": "Water", "grama": "Grass",
+                "eletrico": "Electric", "elétrico": "Electric", "gelo": "Ice",
+                "lutador": "Fighting", "luta": "Fighting", "veneno": "Poison",
+                "terra": "Ground", "voador": "Flying", "psiquico": "Psychic",
+                "psíquico": "Psychic", "inseto": "Bug", "rocha": "Rock",
+                "fantasma": "Ghost", "dragão": "Dragon", "sombrio": "Dark",
+                "fada": "Fairy", "aço": "Steel", "normal": "Normal"
+            }
+            single_type = None
+            for pt, en in type_map.items():
+                if pt in prompt:
+                    single_type = en
+                    break
+            if single_type:
+                filtered = [p for p in filtered if any(t.value == single_type for t in p.types)]
 
             if len(filtered) < 6:
-                st.error(f"❌ Só encontrei {len(filtered)} Pokémon com esses filtros. Tente remover algum filtro ou mudar o prompt.")
+                st.error(f"❌ Só encontrei {len(filtered)} Pokémon com esses filtros. Tente outro prompt.")
                 st.stop()
 
             generated = random.sample(filtered, 6)
             st.session_state.last_generated_team = generated
-            st.success(f"✅ Time gerado! (Geração {gen_filter or 'qualquer'} + filtros aplicados)")
+            st.success(f"✅ Time gerado! (Geração {gen_filter} + filtros do CSV)")
 
-            # Mostra o time gerado
             st.subheader("Seu time gerado pela IA")
             for idx, pkm in enumerate(generated):
                 sprite_url = pkm.sprite
@@ -430,7 +412,7 @@ with tab4:
 
 with tab5:
     st.header("🌟 Modo IA Híbrido + Simulador de Batalhas")
-    st.info("🔧 Em breve: aqui você vai montar time com IA + simular batalhas contra o meta Gen 9.")
+    st.info("🔧 Em breve: montar time com IA + simular batalhas contra o meta Gen 9.")
     st.caption("Funcionalidade em desenvolvimento - volta na próxima atualização!")
     st.write("Quando estiver pronto, você poderá:")
     st.write("• Gerar time com IA + escolher moves/ability/item")
@@ -454,4 +436,4 @@ if team.pokemon:
 else:
     st.info("Adicione Pokémon para exportar.")
 
-st.caption("✅ Fase 6 corrigida • IA agora respeita Geração e Tipo (sidebar + prompt) • Exeggutor Gen 1 funcionando corretamente")
+st.caption("✅ IA agora usa a coluna 'generation' diretamente do CSV")
