@@ -1,7 +1,6 @@
 import sys
 from pathlib import Path
 
-# === CORREÇÃO DE CAMINHO PARA STREAMLIT CLOUD ===
 sys.path.insert(0, str(Path(__file__).parent.absolute()))
 
 import streamlit as st
@@ -35,26 +34,41 @@ def get_generation_by_id(pkm_id):
     elif pkm_id <= 905: return 8
     else: return 9
 
+# ====================== MAPA DE TIPOS PORTUGUÊS → INGLÊS ======================
+pt_to_en_type = {
+    "Planta": "Grass", "Fogo": "Fire", "Água": "Water", "Agua": "Water",
+    "Elétrico": "Electric", "Eletrico": "Electric", "Gelo": "Ice",
+    "Lutador": "Fighting", "Luta": "Fighting", "Veneno": "Poison",
+    "Terra": "Ground", "Voador": "Flying", "Psíquico": "Psychic",
+    "Psiquico": "Psychic", "Inseto": "Bug", "Rocha": "Rock",
+    "Fantasma": "Ghost", "Dragão": "Dragon", "Dragao": "Dragon",
+    "Sombrio": "Dark", "Fada": "Fairy", "Aço": "Steel", "Normal": "Normal"
+}
+
 if "full_pokedex" not in st.session_state:
     try:
-        # === ARQUIVO LIMPO EM PORTUGUÊS ===
         df = pd.read_csv("data/pokemon_cleaned_pt.csv")
         st.session_state.full_pokedex = []
 
         for _, row in df.iterrows():
             types = []
-            for col in ["type1", "Type 1", "type_1", "Type1", "tipo1", "Tipo 1", "tipo_1"]:
+            # Tipo 1
+            for col in ["type1", "tipo1", "Type 1", "Tipo 1", "type_1", "tipo_1"]:
                 if col in row and pd.notna(row[col]):
-                    t = str(row[col]).title().strip()
-                    if t and t != "Nan":
-                        types.append(Type(t))
-                        break
-            for col in ["type2", "Type 2", "type_2", "Type2", "tipo2", "Tipo 2", "tipo_2"]:
+                    tipo_pt = str(row[col]).strip().title()
+                    tipo_en = pt_to_en_type.get(tipo_pt, tipo_pt)
+                    if tipo_en:
+                        types.append(Type(tipo_en))
+                    break
+
+            # Tipo 2
+            for col in ["type2", "tipo2", "Type 2", "Tipo 2", "type_2", "tipo_2"]:
                 if col in row and pd.notna(row[col]):
-                    t = str(row[col]).title().strip()
-                    if t and t != "Nan" and t not in [tp.value for tp in types]:
-                        types.append(Type(t))
-                        break
+                    tipo_pt = str(row[col]).strip().title()
+                    tipo_en = pt_to_en_type.get(tipo_pt, tipo_pt)
+                    if tipo_en and tipo_en not in [t.value for t in types]:
+                        types.append(Type(tipo_en))
+                    break
 
             sprite = None
             for col in ["sprite", "Sprite", "image", "front_default", "img", "image_url", "sprite_url"]:
@@ -67,9 +81,9 @@ if "full_pokedex" not in st.session_state:
                 if col in row and pd.notna(row[col]):
                     abilities.extend([a.strip().title() for a in str(row[col]).split(",") if a.strip()])
 
-            # === COLUNA DO NOME (aceita "name" ou "nome") ===
+            # Nome (aceita "name" ou "nome")
             nome = ""
-            for col_name in ["name", "Name", "nome", "Nome", "pokemon", "Pokémon", "Pokemon"]:
+            for col_name in ["name", "Name", "nome", "Nome", "pokemon", "Pokémon"]:
                 if col_name in row and pd.notna(row[col_name]):
                     nome = str(row[col_name]).strip()
                     break
@@ -83,7 +97,7 @@ if "full_pokedex" not in st.session_state:
                 sprite=sprite
             )
 
-            # Geração (coluna do CSV limpo)
+            # Geração
             generation = None
             for col_name in ["generation", "Generation", "gen", "Gen", "geracao", "Geração", "generation_number"]:
                 if col_name in row and pd.notna(row[col_name]):
@@ -264,7 +278,9 @@ with tab4:
                                 st.success(f"✅ {pkm.name} adicionado!")
                                 st.rerun()
 
-# (as outras abas 2, 3 e 5 continuam iguais - não precisam de mudança)
+with tab5:
+    st.header("🌟 Modo IA Híbrido + Simulador de Batalhas")
+    st.info("🔧 Em breve...")
 
 st.divider()
 st.subheader("📤 Exportação Rápida")
@@ -283,4 +299,4 @@ if team.pokemon:
 else:
     st.info("Adicione Pokémon para exportar.")
 
-st.caption("✅ Usando pokemon_cleaned_pt.csv + Gen 1 filtrado por ID")
+st.caption("✅ pokemon_cleaned_pt.csv carregado + tipos PT→EN traduzidos")
