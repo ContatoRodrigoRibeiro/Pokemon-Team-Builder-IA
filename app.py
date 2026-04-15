@@ -438,4 +438,4 @@ if team.pokemon:
 else:
     st.info("Adicione Pokémon para exportar.")
 
-st.caption("✅ )
+st.caption("✅ ")
