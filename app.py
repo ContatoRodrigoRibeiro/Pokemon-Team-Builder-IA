@@ -22,24 +22,15 @@ if "last_generated_team" not in st.session_state:
     st.session_state.last_generated_team = []
 
 def get_generation_by_id(pkm_id):
-    if pkm_id <= 151:
-        return 1
-    elif pkm_id <= 251:
-        return 2
-    elif pkm_id <= 386:
-        return 3
-    elif pkm_id <= 493:
-        return 4
-    elif pkm_id <= 649:
-        return 5
-    elif pkm_id <= 721:
-        return 6
-    elif pkm_id <= 809:
-        return 7
-    elif pkm_id <= 905:
-        return 8
-    else:
-        return 9
+    if pkm_id <= 151: return 1
+    elif pkm_id <= 251: return 2
+    elif pkm_id <= 386: return 3
+    elif pkm_id <= 493: return 4
+    elif pkm_id <= 649: return 5
+    elif pkm_id <= 721: return 6
+    elif pkm_id <= 809: return 7
+    elif pkm_id <= 905: return 8
+    else: return 9
 
 if "full_pokedex" not in st.session_state:
     try:
@@ -314,11 +305,11 @@ with tab3:
 
 with tab4:
     st.header("🤖 Gerar Time Completo com IA")
-    st.caption("Filtro FORTE: usa exatamente a coluna 'generation' do CSV")
+    st.caption("Reconhece prompts naturais como no zufallspokemon.de (gen + tipo) usando a coluna 'generation' do CSV")
 
     user_prompt = st.text_area(
-        "Descreva o estilo do time",
-        placeholder="time defensivo gen 1",
+        "Descreva o time (ex: time gen 1 tipo normal, geração 3 tipo fogo, kanto água...)",
+        placeholder="time gen 1 tipo normal",
         height=100
     )
 
@@ -330,41 +321,52 @@ with tab4:
             st.error("Digite uma descrição!")
             st.stop()
 
-        with st.spinner("🔍 IA analisando geração e tipo do CSV..."):
+        with st.spinner("🔍 IA analisando prompt (geração + tipo do CSV)..."):
             prompt = user_prompt.lower()
+
             filtered = st.session_state.full_pokedex.copy()
 
+            # Filtro de Geração (muito mais robusto)
             gen_filter = None
-            if any(x in prompt for x in ["gen 1", "gen1", "kanto", "primeira", "1ª"]):
-                gen_filter = 1
-            elif any(x in prompt for x in ["gen 2", "gen2", "johto", "segunda", "2ª"]):
-                gen_filter = 2
-            elif any(x in prompt for x in ["gen 3", "gen3", "hoenn", "terceira", "3ª"]):
-                gen_filter = 3
-            elif any(x in prompt for x in ["gen 4", "gen4", "sinnoh", "quarta", "4ª"]):
-                gen_filter = 4
-            elif any(x in prompt for x in ["gen 5", "gen5", "unova", "quinta", "5ª"]):
-                gen_filter = 5
-            elif any(x in prompt for x in ["gen 6", "gen6", "kalos", "sexta", "6ª"]):
-                gen_filter = 6
-            elif any(x in prompt for x in ["gen 7", "gen7", "alola", "sétima", "7ª"]):
-                gen_filter = 7
-            elif any(x in prompt for x in ["gen 8", "gen8", "galar", "oitava", "8ª"]):
-                gen_filter = 8
-            elif any(x in prompt for x in ["gen 9", "gen9", "paldea", "nona", "9ª"]):
-                gen_filter = 9
+            gen_keywords = {
+                1: ["gen 1", "gen1", "kanto", "primeira", "1ª", "geração 1", "geracao 1"],
+                2: ["gen 2", "gen2", "johto", "segunda", "2ª", "geração 2", "geracao 2"],
+                3: ["gen 3", "gen3", "hoenn", "terceira", "3ª", "geração 3", "geracao 3"],
+                4: ["gen 4", "gen4", "sinnoh", "quarta", "4ª", "geração 4", "geracao 4"],
+                5: ["gen 5", "gen5", "unova", "quinta", "5ª", "geração 5", "geracao 5"],
+                6: ["gen 6", "gen6", "kalos", "sexta", "6ª", "geração 6", "geracao 6"],
+                7: ["gen 7", "gen7", "alola", "sétima", "7ª", "geração 7", "geracao 7"],
+                8: ["gen 8", "gen8", "galar", "oitava", "8ª", "geração 8", "geracao 8"],
+                9: ["gen 9", "gen9", "paldea", "nona", "9ª", "geração 9", "geracao 9"]
+            }
+            for g, keys in gen_keywords.items():
+                if any(k in prompt for k in keys):
+                    gen_filter = g
+                    break
 
             if gen_filter:
                 filtered = [p for p in filtered if p.generation == gen_filter]
 
+            # Filtro de Tipo (suporta "tipo X" ou só "X")
             type_map = {
-                "fogo": "Fire", "agua": "Water", "água": "Water", "grama": "Grass",
-                "eletrico": "Electric", "elétrico": "Electric", "gelo": "Ice",
-                "lutador": "Fighting", "luta": "Fighting", "veneno": "Poison",
-                "terra": "Ground", "voador": "Flying", "psiquico": "Psychic",
-                "psíquico": "Psychic", "inseto": "Bug", "rocha": "Rock",
-                "fantasma": "Ghost", "dragão": "Dragon", "sombrio": "Dark",
-                "fada": "Fairy", "aço": "Steel", "normal": "Normal"
+                "fogo": "Fire", "fire": "Fire",
+                "agua": "Water", "água": "Water", "water": "Water",
+                "grama": "Grass", "grass": "Grass",
+                "eletrico": "Electric", "elétrico": "Electric", "electric": "Electric",
+                "gelo": "Ice", "ice": "Ice",
+                "lutador": "Fighting", "luta": "Fighting", "fighting": "Fighting",
+                "veneno": "Poison", "poison": "Poison",
+                "terra": "Ground", "ground": "Ground",
+                "voador": "Flying", "flying": "Flying",
+                "psiquico": "Psychic", "psíquico": "Psychic", "psychic": "Psychic",
+                "inseto": "Bug", "bug": "Bug",
+                "rocha": "Rock", "rock": "Rock",
+                "fantasma": "Ghost", "ghost": "Ghost",
+                "dragao": "Dragon", "dragão": "Dragon", "dragon": "Dragon",
+                "sombrio": "Dark", "dark": "Dark",
+                "fada": "Fairy", "fairy": "Fairy",
+                "aço": "Steel", "steel": "Steel",
+                "normal": "Normal", "normal": "Normal"
             }
             single_type = None
             for pt, en in type_map.items():
@@ -380,7 +382,7 @@ with tab4:
 
             generated = random.sample(filtered, 6)
             st.session_state.last_generated_team = generated
-            st.success(f"✅ Time gerado! (Geração {gen_filter} + filtros do CSV)")
+            st.success(f"✅ Time gerado! (Geração {gen_filter or 'qualquer'} + tipo aplicado)")
 
             st.subheader("Seu time gerado pela IA")
             for idx, pkm in enumerate(generated):
@@ -436,4 +438,4 @@ if team.pokemon:
 else:
     st.info("Adicione Pokémon para exportar.")
 
-st.caption("✅ IA agora usa a coluna 'generation' diretamente do CSV")
+st.caption("✅ )
