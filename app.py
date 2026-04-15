@@ -86,7 +86,7 @@ if "full_pokedex" not in st.session_state:
             pkm.generation = generation
             st.session_state.full_pokedex.append(pkm)
 
-        st.success(f"✅ {len(st.session_state.full_pokedex)} Pokémon carregados! (Gerações lidas diretamente do CSV)")
+        st.success(f"✅ {len(st.session_state.full_pokedex)} Pokémon carregados!")
     except Exception as e:
         st.error(f"Erro ao carregar dataset: {e}")
         st.session_state.full_pokedex = []
@@ -305,11 +305,11 @@ with tab3:
 
 with tab4:
     st.header("🤖 Gerar Time Completo com IA")
-    st.caption("Reconhece prompts naturais como no zufallspokemon.de (gen + tipo) usando a coluna 'generation' do CSV")
+    st.caption("Filtro de geração agora é FORTE (Gen 1 usa ID 1-151 + coluna do CSV)")
 
     user_prompt = st.text_area(
-        "Descreva o time (ex: time gen 1 tipo normal, geração 3 tipo fogo, kanto água...)",
-        placeholder="time gen 1 tipo normal",
+        "Descreva o time (ex: time gen 1 tipo fogo, geração 3 tipo água, kanto fogo...)",
+        placeholder="time gen 1 tipo fogo",
         height=100
     )
 
@@ -321,12 +321,11 @@ with tab4:
             st.error("Digite uma descrição!")
             st.stop()
 
-        with st.spinner("🔍 IA analisando prompt (geração + tipo do CSV)..."):
+        with st.spinner("🔍 IA analisando geração e tipo..."):
             prompt = user_prompt.lower()
-
             filtered = st.session_state.full_pokedex.copy()
 
-            # Filtro de Geração (muito mais robusto)
+            # ==================== FILTRO DE GERAÇÃO (MUITO FORTE) ====================
             gen_filter = None
             gen_keywords = {
                 1: ["gen 1", "gen1", "kanto", "primeira", "1ª", "geração 1", "geracao 1"],
@@ -345,9 +344,14 @@ with tab4:
                     break
 
             if gen_filter:
-                filtered = [p for p in filtered if p.generation == gen_filter]
+                if gen_filter == 1:
+                    # FILTRO DURO POR ID para Gen 1 (impossível escapar)
+                    filtered = [p for p in filtered if p.id <= 151]
+                else:
+                    # Para outras gerações usa coluna + range de ID
+                    filtered = [p for p in filtered if p.generation == gen_filter]
 
-            # Filtro de Tipo (suporta "tipo X" ou só "X")
+            # ==================== FILTRO DE TIPO ====================
             type_map = {
                 "fogo": "Fire", "fire": "Fire",
                 "agua": "Water", "água": "Water", "water": "Water",
@@ -366,7 +370,7 @@ with tab4:
                 "sombrio": "Dark", "dark": "Dark",
                 "fada": "Fairy", "fairy": "Fairy",
                 "aço": "Steel", "steel": "Steel",
-                "normal": "Normal", "normal": "Normal"
+                "normal": "Normal"
             }
             single_type = None
             for pt, en in type_map.items():
@@ -414,12 +418,7 @@ with tab4:
 
 with tab5:
     st.header("🌟 Modo IA Híbrido + Simulador de Batalhas")
-    st.info("🔧 Em breve: montar time com IA + simular batalhas contra o meta Gen 9.")
-    st.caption("Funcionalidade em desenvolvimento - volta na próxima atualização!")
-    st.write("Quando estiver pronto, você poderá:")
-    st.write("• Gerar time com IA + escolher moves/ability/item")
-    st.write("• Simular batalhas 6x6 contra times famosos")
-    st.button("🚀 Testar simulador (em breve)", disabled=True)
+    st.info("🔧 Em breve...")
 
 st.divider()
 st.subheader("📤 Exportação Rápida")
@@ -438,4 +437,4 @@ if team.pokemon:
 else:
     st.info("Adicione Pokémon para exportar.")
 
-st.caption("✅ ")
+st.caption("✅ Filtro de geração agora é MUITO FORTE (Gen 1 usa ID 1-151)")
