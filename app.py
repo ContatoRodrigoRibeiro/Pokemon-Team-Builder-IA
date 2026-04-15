@@ -1,3 +1,7 @@
+import sys
+sys.path.insert(0, ".")
+
+import streamlit as st
 import streamlit as st
 import pandas as pd
 import random
