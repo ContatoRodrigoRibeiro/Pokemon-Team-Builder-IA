@@ -48,18 +48,15 @@ def get_generation_by_id(pkm_id):
 
 
 def extrair_geracao_do_prompt(prompt: str):
-    """Detecta qualquer menção de geração no prompt."""
     if not prompt:
         return None
     prompt = prompt.lower().strip()
-
     padroes = [
         r'(?:gen|geração|geracao|generação|g)\s*(\d+)',
         r'g(\d+)',
         r'(\d+)[ªa]?\s*(?:gen|geração|geracao|generação)',
         r'(?:gen|geração|geracao|generação)\s*(\d+)[ªa]?',
     ]
-
     for padrao in padroes:
         match = re.search(padrao, prompt)
         if match:
@@ -81,18 +78,39 @@ pt_to_en = {
 if "full_pokedex" not in st.session_state:
     try:
         df = pd.read_csv("data/pokemon_cleaned_pt.csv")
+
+        # ===================== DEBUG COMPLETO DO CSV =====================
+        st.success(f"✅ CSV carregado com {len(df)} linhas!")
+        st.info(f"📋 Colunas encontradas: {df.columns.tolist()}")
+
+        # Tenta detectar coluna de ID de forma robusta
+        id_col = None
+        for possible in ["#", "ID", "id", "Id", "national_id", "dex", "pokemon_id", "index"]:
+            if possible in df.columns:
+                id_col = possible
+                break
+
+        if id_col:
+            df['id_temp'] = pd.to_numeric(df[id_col], errors='coerce').fillna(0).astype(int)
+            st.info(f"🔑 Coluna de ID detectada: '{id_col}' (valores de {df['id_temp'].min()} a {df['id_temp'].max()})")
+        else:
+            df['id_temp'] = list(range(1, len(df) + 1))  # fallback
+            st.warning("⚠️ Nenhuma coluna de ID encontrada → usando índice sequencial")
+
         st.session_state.full_pokedex = []
 
         for _, row in df.iterrows():
-            # === TIPOS ===
+            # TIPOS - mais robusto
             types = []
-            for col in ["type1", "tipo1", "Type 1", "Tipo 1"]:
+            type_cols = ["type1", "tipo1", "Type 1", "Tipo 1", "type_1", "tipo_1"]
+            for col in type_cols:
                 if col in row and pd.notna(row[col]):
                     tipo_pt = str(row[col]).strip().title()
                     tipo_en = pt_to_en.get(tipo_pt, tipo_pt)
                     types.append(Type(tipo_en))
                     break
-            for col in ["type2", "tipo2", "Type 2", "Tipo 2"]:
+            type2_cols = ["type2", "tipo2", "Type 2", "Tipo 2", "type_2", "tipo_2"]
+            for col in type2_cols:
                 if col in row and pd.notna(row[col]):
                     tipo_pt = str(row[col]).strip().title()
                     tipo_en = pt_to_en.get(tipo_pt, tipo_pt)
@@ -100,17 +118,19 @@ if "full_pokedex" not in st.session_state:
                         types.append(Type(tipo_en))
                     break
 
-            sprite = str(row.get("sprite", row.get("image", ""))).strip() or None
+            sprite = str(row.get("sprite", row.get("image", row.get("Sprite", "")))).strip() or None
 
             abilities = []
-            for col in ["ability1", "ability2", "ability3", "abilities"]:
+            for col in ["ability1", "ability2", "ability3", "abilities", "Abilities"]:
                 if col in row and pd.notna(row[col]):
                     abilities.extend([a.strip().title() for a in str(row[col]).split(",") if a.strip()])
 
-            nome = str(row.get("name", row.get("nome", row.get("pokemon", "")))).strip()
+            nome = str(row.get("name", row.get("nome", row.get("pokemon", row.get("Nome", ""))))).strip()
+
+            pkm_id = int(row.get('id_temp', 0))
 
             pkm = Pokemon(
-                id=int(row.get("id", row.get("ID", row.get("#", 0)))),
+                id=pkm_id,
                 name=nome.replace("-", " ").title(),
                 types=types,
                 abilities=list(dict.fromkeys(abilities)),
@@ -118,38 +138,34 @@ if "full_pokedex" not in st.session_state:
                 sprite=sprite
             )
 
-            # ===================== MELHORIA FORTE NA CARGA DE GERAÇÃO =====================
+            # ===================== GERAÇÃO - MUITO MAIS ROBUSTA =====================
             gen = None
-            gen_columns = ["Generation", "generation", "Gen", "gen",
-                           "Geração", "geração", "Geracao", "geracao", "Generacao"]
-
-            for col in gen_columns:
+            gen_cols = ["Generation", "generation", "Gen", "gen", "Geração", "geração",
+                        "Geracao", "geracao", "Generacao", "gen_number"]
+            for col in gen_cols:
                 if col in row and pd.notna(row[col]):
                     try:
                         gen = int(row[col])
                         break
-                    except (ValueError, TypeError):
+                    except:
                         pass
 
-            # Fallback por ID (muito mais confiável quando a coluna falha)
-            if gen is None or gen == 0:
-                gen = get_generation_by_id(pkm.id)
+            # Se não encontrou coluna de geração → usa ID (agora com id_temp corrigido)
+            if gen is None:
+                gen = get_generation_by_id(pkm_id)
 
             pkm.generation = gen
-            # ================================================================================
-
             st.session_state.full_pokedex.append(pkm)
 
-        # === DEBUG DE GERAÇÕES (aparece só uma vez) ===
+        # Relatório final de gerações
         gen_count = Counter(p.generation for p in st.session_state.full_pokedex)
-        st.success(f"✅ {len(st.session_state.full_pokedex)} Pokémon carregados!")
-        st.info(f"📊 Gerações carregadas: {dict(sorted(gen_count.items()))}")
+        st.success(f"✅ {len(st.session_state.full_pokedex)} Pokémon carregados com sucesso!")
+        st.info(f"📊 Distribuição de gerações: {dict(sorted(gen_count.items()))}")
 
     except Exception as e:
         st.error(f"Erro ao carregar pokemon_cleaned_pt.csv: {e}")
         st.session_state.full_pokedex = []
 
-# ====================== TABS ======================
 tab1, tab2, tab3, tab4, tab5 = st.tabs([
     "🛠️ Modo Manual",
     "🔬 Análise Avançada",
@@ -159,6 +175,7 @@ tab1, tab2, tab3, tab4, tab5 = st.tabs([
 ])
 
 with tab1:
+    # (código do modo manual mantido exatamente igual - sem alterações)
     st.header("Monte seu Time Manualmente")
     col_busca, col_time = st.columns([2, 3])
 
@@ -220,7 +237,7 @@ with tab1:
 
 with tab4:
     st.header("🤖 Gerar Time Completo com IA")
-    st.caption("Usando pokemon_cleaned_pt.csv + Detecção inteligente de geração (Gen 1 a Gen 9)")
+    st.caption("Usando pokemon_cleaned_pt.csv + Detecção inteligente de geração")
 
     user_prompt = st.text_area(
         "Descreva o time",
@@ -247,7 +264,7 @@ with tab4:
                 filtered = [p for p in filtered if getattr(p, 'generation', 0) == gen_filter]
 
                 if len(filtered) == 0:
-                    # FALLBACK POR ID (caso a coluna de geração esteja com problema)
+                    # Fallback final por ID
                     filtered = [p for p in st.session_state.full_pokedex
                                 if get_generation_by_id(p.id) == gen_filter]
                     st.warning(f"⚠️ Usando fallback por ID para Gen {gen_filter}")
@@ -257,7 +274,7 @@ with tab4:
                 st.info("🔄 Nenhuma geração específica detectada → usando todos os Pokémon")
             # ============================================================
 
-            # Filtro por tipo (mantido igual)
+            # Filtro por tipo (mais robusto)
             type_map = {
                 "fogo": "Fire", "água": "Water", "grama": "Grass", "eletrico": "Electric",
                 "gelo": "Ice", "lutador": "Fighting", "veneno": "Poison", "terra": "Ground",
@@ -273,6 +290,7 @@ with tab4:
                     break
             if single_type:
                 filtered = [p for p in filtered if any(t.value == single_type for t in p.types)]
+                st.success(f"🔥 Tipo {single_type} aplicado ({len(filtered)} Pokémon restantes)")
 
             if len(filtered) < 6:
                 st.error(f"❌ Só encontrei {len(filtered)} Pokémon com esses filtros.")
@@ -328,4 +346,4 @@ if team.pokemon:
 else:
     st.info("Adicione Pokémon para exportar.")
 
-st.caption("✅ Versão corrigida - Coluna Generation detectada + fallback por ID + debug completo")
+st.caption("✅ Versão com debug completo + detecção robusta de ID/Geração/Tipo")
