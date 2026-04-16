@@ -45,10 +45,16 @@ def get_generation_by_id(pkm_id):
 def extrair_geracao_do_prompt(prompt: str):
     if not prompt: return None
     prompt = prompt.lower().strip()
-    padroes = [r'(?:gen|geração|geracao|generação|g)\s*(\d+)', r'g(\d+)', r'(\d+)[ªa]?\s*(?:gen|geração|geracao|generação)', r'(?:gen|geração|geracao|generação)\s*(\d+)[ªa]?']
+    padroes = [
+        r'(?:gen|geração|geracao|generação|g)\s*(\d+)',
+        r'g(\d+)',
+        r'(\d+)[ªa]?\s*(?:gen|geração|geracao|generação)',
+        r'(?:gen|geração|geracao|generação)\s*(\d+)[ªa]?'
+    ]
     for padrao in padroes:
         match = re.search(padrao, prompt)
-        if match: return int(match.group(1))
+        if match:
+            return int(match.group(1))
     return None
 
 pt_to_en = {
@@ -72,20 +78,21 @@ type_colors = {
 def get_card_color(primary_type):
     return type_colors.get(primary_type, "#A8A878")
 
-def render_pokemon_card(pkm, show_remove=False, key_prefix="card"):
+def render_pokemon_card(pkm, show_remove=False, index=None, key_prefix="card"):
     primary_type = pkm.types[0].value if pkm.types else "Normal"
     card_color = get_card_color(primary_type)
     stats = pkm.base_stats
     bst = getattr(pkm, 'bst', sum(stats.values()) if stats else 0)
 
     with st.container(border=True):
+        # Cabeçalho
         col_h1, col_h2 = st.columns([4, 1])
         with col_h1:
             st.markdown(f"<div style='background:{card_color}; color:white; padding:6px 12px; border-radius:8px; font-size:0.85rem; font-weight:bold; text-align:center;'>BASIC</div>", unsafe_allow_html=True)
         with col_h2:
             st.markdown(f"<div style='background:#2E2E2E; color:white; padding:6px 8px; border-radius:8px; font-size:1.05rem; font-weight:bold; text-align:center;'>HP {stats.get('HP', 0)}</div>", unsafe_allow_html=True)
 
-        # Sprite com tamanho fixo (principal correção)
+        # Sprite centralizado
         sprite_url = pkm.sprite
         if not sprite_url or "http" not in str(sprite_url):
             try:
@@ -96,9 +103,12 @@ def render_pokemon_card(pkm, show_remove=False, key_prefix="card"):
             except:
                 sprite_url = None
         if sprite_url:
-            st.image(sprite_url, width=160)   # ← Tamanho controlado
+            st.markdown("<div style='display:flex; justify-content:center; margin:12px 0;'>", unsafe_allow_html=True)
+            st.image(sprite_url, width=160)
+            st.markdown("</div>", unsafe_allow_html=True)
 
-        st.markdown(f"<h3 style='text-align:center; margin:8px 0 4px 0;'>{pkm.name}</h3>", unsafe_allow_html=True)
+        # Nome
+        st.markdown(f"<h3 style='text-align:center; margin:8px 0 6px 0;'>{pkm.name}</h3>", unsafe_allow_html=True)
 
         # Tipos
         type_cols = st.columns(len(pkm.types))
@@ -108,7 +118,7 @@ def render_pokemon_card(pkm, show_remove=False, key_prefix="card"):
 
         # Stats
         st.markdown(f"""
-        <div style="display:flex; justify-content:space-around; background:#1E1E1E; padding:10px; border-radius:12px; margin-top:12px; font-size:0.8rem;">
+        <div style="display:flex; justify-content:space-around; background:#1E1E1E; padding:12px; border-radius:12px; margin-top:12px; font-size:0.8rem;">
             <div><b>ATK</b><br>{stats.get('ATK',0)}</div>
             <div><b>DEF</b><br>{stats.get('DEF',0)}</div>
             <div><b>SPA</b><br>{stats.get('SPA',0)}</div>
@@ -118,9 +128,10 @@ def render_pokemon_card(pkm, show_remove=False, key_prefix="card"):
         </div>
         """, unsafe_allow_html=True)
 
-        if show_remove:
-            if st.button("🗑️ Remover", key=f"{key_prefix}_{pkm.id}", use_container_width=True):
-                st.session_state.current_team.remove_pokemon_by_id(pkm.id)
+        # Botão remover
+        if show_remove and index is not None:
+            if st.button("🗑️ Remover", key=f"{key_prefix}_{index}", use_container_width=True):
+                st.session_state.current_team.remove_pokemon(index)
                 st.rerun()
 
 # ====================== CARREGAMENTO CSV ======================
@@ -194,11 +205,14 @@ with tab1:
                         r = requests.get(f"https://pokeapi.co/api/v2/pokemon/{pokemon_name.replace(' ', '-')}", timeout=10)
                         if r.status_code == 200:
                             data = r.json()
-                            pkm = Pokemon(id=data["id"], name=data["name"].replace("-", " ").title(),
-                                          types=[Type(t["type"]["name"].title()) for t in data["types"]],
-                                          abilities=[a["ability"]["name"].replace("-", " ").title() for a in data["abilities"]],
-                                          base_stats={stat["stat"]["name"]: stat["base_stat"] for stat in data["stats"]},
-                                          sprite=data["sprites"]["front_default"])
+                            pkm = Pokemon(
+                                id=data["id"],
+                                name=data["name"].replace("-", " ").title(),
+                                types=[Type(t["type"]["name"].title()) for t in data["types"]],
+                                abilities=[a["ability"]["name"].replace("-", " ").title() for a in data["abilities"]],
+                                base_stats={stat["stat"]["name"]: stat["base_stat"] for stat in data["stats"]},
+                                sprite=data["sprites"]["front_default"]
+                            )
                             pkm.generation = get_generation_by_id(pkm.id)
                             st.session_state.pokemon_cache[pokemon_name] = pkm
                         else:
@@ -219,7 +233,7 @@ with tab1:
             cols = st.columns(len(team.pokemon))
             for i, pkm in enumerate(team.pokemon):
                 with cols[i]:
-                    render_pokemon_card(pkm, show_remove=True, key_prefix=f"manual_{i}")
+                    render_pokemon_card(pkm, show_remove=True, index=i, key_prefix=f"manual_{i}")
         else:
             st.info("Time vazio. Adicione Pokémon acima.")
 
@@ -268,8 +282,6 @@ with tab4:
             with cols[idx]:
                 render_pokemon_card(pkm, show_remove=False, key_prefix=f"gen_{idx}")
 
-# (As demais abas - Análise Avançada, Recomendações e Híbrido - permanecem iguais às versões anteriores)
-
 st.divider()
 st.subheader("📤 Exportação Rápida")
 team = st.session_state.current_team
@@ -287,4 +299,4 @@ if team.pokemon:
 else:
     st.info("Adicione Pokémon para exportar.")
 
-st.caption("✅ Cards corrigidos • Tamanho normalizado • Gerar com IA funcionando")
+st.caption("✅ Cards centralizados e harmoniosos")
