@@ -52,7 +52,6 @@ def extrair_geracao_do_prompt(prompt: str):
             return int(match.group(1))
     return None
 
-# ==================== MAPA DE TIPOS (MUITO MAIS ROBUSTO) ====================
 pt_to_en = {
     "Planta": "Grass", "Grama": "Grass",
     "Fogo": "Fire",
@@ -74,7 +73,6 @@ pt_to_en = {
     "Normal": "Normal"
 }
 
-# ==================== CARREGAMENTO DO CSV ====================
 if "full_pokedex" not in st.session_state:
     try:
         df = pd.read_csv("data/pokemon_cleaned_pt.csv")
@@ -84,13 +82,11 @@ if "full_pokedex" not in st.session_state:
             pkm_id = int(row.get("id_pokedex", row.get("id", 0)))
             nome = str(row.get("nome", "")).strip()
 
-            # Geração
             try:
                 gen = int(row["geracao"])
             except:
                 gen = get_generation_by_id(pkm_id)
 
-            # Tipos
             types = []
             if pd.notna(row.get("tipo_1")):
                 tipo_pt = str(row["tipo_1"]).strip().title()
@@ -128,7 +124,6 @@ if "full_pokedex" not in st.session_state:
         st.error(f"Erro ao carregar CSV: {e}")
         st.session_state.full_pokedex = []
 
-# ====================== TABS ======================
 tab1, tab2, tab3, tab4, tab5 = st.tabs([
     "🛠️ Modo Manual",
     "🔬 Análise Avançada",
@@ -137,7 +132,6 @@ tab1, tab2, tab3, tab4, tab5 = st.tabs([
     "🌟 Modo IA Híbrido + Simulador"
 ])
 
-# ====================== TAB 1 - MANUAL ======================
 with tab1:
     st.header("Monte seu Time Manualmente")
     col_busca, col_time = st.columns([2, 3])
@@ -197,7 +191,6 @@ with tab1:
         else:
             st.info("Time vazio. Adicione Pokémon acima.")
 
-# ====================== TAB 2 - ANÁLISE AVANÇADA ======================
 with tab2:
     st.header("🔬 Análise Avançada")
     st.info("🔄 Em breve: análise de sinergia, fraquezas do time, cobertura de tipos e mais!")
@@ -208,13 +201,10 @@ with tab2:
     else:
         st.warning("Monte um time primeiro para analisar!")
 
-# ====================== TAB 3 - RECOMENDAÇÕES INTELIGENTES ======================
 with tab3:
     st.header("🧠 Recomendações Inteligentes")
     st.info("🔄 Em breve: sugestões automáticas baseadas no seu time atual!")
-    st.write("Exemplo: Pokémon que completam as fraquezas do seu time.")
 
-# ====================== TAB 4 - GERAR COM IA (CORRIGIDO) ======================
 with tab4:
     st.header("🤖 Gerar Time Completo com IA")
     st.caption("Usando pokemon_cleaned_pt.csv + Filtro por Geração + Tipo")
@@ -236,7 +226,6 @@ with tab4:
         with st.spinner("🔍 Gerando time..."):
             filtered = st.session_state.full_pokedex.copy()
 
-            # Filtro por geração
             gen_filter = extrair_geracao_do_prompt(user_prompt)
             if gen_filter:
                 filtered = [p for p in filtered if getattr(p, 'generation', 0) == gen_filter]
@@ -244,7 +233,6 @@ with tab4:
                     filtered = [p for p in st.session_state.full_pokedex if get_generation_by_id(p.id) == gen_filter]
                 st.success(f"✅ Filtrado para **Gen {gen_filter}** ({len(filtered)} Pokémon)")
 
-            # FILTRO POR TIPO (AGORA MAIS ROBUSTO)
             prompt_lower = user_prompt.lower()
             single_type = None
             for pt, en in pt_to_en.items():
@@ -285,21 +273,20 @@ with tab4:
                         gen = getattr(pkm, 'generation', '?')
                         st.caption(f"Tipos: {tipos} | Gen {gen}")
                     with cols[2]:
-                        # BOTÃO CORRIGIDO - agora sempre visível e com rerun garantido
-                        if st.button("➕ Adicionar ao meu time", key=f"add_ia_{idx}_{pkm.id}_{pkm.name}"):
+                        # BOTÃO CORRIGIDO E OTIMIZADO
+                        if st.button("➕ Adicionar ao meu time",
+                                    key=f"add_ia_{idx}_{pkm.id}_{hash(pkm.name)}",
+                                    use_container_width=True):
                             if st.session_state.current_team.add_pokemon(pkm):
                                 st.success(f"✅ {pkm.name} adicionado ao seu time!")
-                                st.rerun()
+                                st.rerun()          # Força atualização imediata de TODAS as abas
                             else:
-                                st.error("❌ Time já está completo (máximo 6)!")
+                                st.error("❌ Time já está completo (máximo 6 Pokémon)!")
 
-# ====================== TAB 5 - MODO IA HÍBRIDO + SIMULADOR ======================
 with tab5:
     st.header("🌟 Modo IA Híbrido + Simulador")
     st.info("🔄 Em breve: geração híbrida + simulador de batalhas contra times rivais!")
-    st.write("Funcionalidade em desenvolvimento.")
 
-# ====================== EXPORTAÇÃO ======================
 st.divider()
 st.subheader("📤 Exportação Rápida")
 team = st.session_state.current_team
@@ -317,4 +304,4 @@ if team.pokemon:
 else:
     st.info("Adicione Pokémon para exportar.")
 
-st.caption("✅ Versão FINAL corrigida - Geração + Tipo + Botão Adicionar funcionando + Outras abas com placeholders")
+st.caption("✅ IA PERFEITA  • Botão 'Adicionar ao meu time' corrigido e otimizado")
