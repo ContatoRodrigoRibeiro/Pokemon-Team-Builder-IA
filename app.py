@@ -1,5 +1,6 @@
 import sys
 from pathlib import Path
+from collections import Counter
 
 sys.path.insert(0, str(Path(__file__).parent.absolute()))
 
@@ -47,18 +48,16 @@ def get_generation_by_id(pkm_id):
 
 
 def extrair_geracao_do_prompt(prompt: str):
-    """Detecta 'gen X', 'geração X', 'gX', '9ª geração' etc. e retorna o número da geração."""
+    """Detecta qualquer menção de geração no prompt."""
     if not prompt:
         return None
     prompt = prompt.lower().strip()
 
-    # Padrões robustos em português e inglês
     padroes = [
-        r'(?:gen|geração|geracao|generação|g)\s*(\d+)',  # gen 9, geração 3, g1
-        r'(?:gen|geração|geracao|generação)\s*(\d+)',  # com espaço
-        r'g(\d+)',  # g9
-        r'(\d+)[ªa]?\s*(?:gen|geração|geracao|generação)',  # 9ª geração, 3 gen
-        r'(?:gen|geração|geracao|generação)\s*(\d+)[ªa]?',  # geração 9ª
+        r'(?:gen|geração|geracao|generação|g)\s*(\d+)',
+        r'g(\d+)',
+        r'(\d+)[ªa]?\s*(?:gen|geração|geracao|generação)',
+        r'(?:gen|geração|geracao|generação)\s*(\d+)[ªa]?',
     ]
 
     for padrao in padroes:
@@ -85,6 +84,7 @@ if "full_pokedex" not in st.session_state:
         st.session_state.full_pokedex = []
 
         for _, row in df.iterrows():
+            # === TIPOS ===
             types = []
             for col in ["type1", "tipo1", "Type 1", "Tipo 1"]:
                 if col in row and pd.notna(row[col]):
@@ -110,7 +110,7 @@ if "full_pokedex" not in st.session_state:
             nome = str(row.get("name", row.get("nome", row.get("pokemon", "")))).strip()
 
             pkm = Pokemon(
-                id=int(row.get("id", row.get("ID", 0))),
+                id=int(row.get("id", row.get("ID", row.get("#", 0)))),
                 name=nome.replace("-", " ").title(),
                 types=types,
                 abilities=list(dict.fromkeys(abilities)),
@@ -118,23 +118,38 @@ if "full_pokedex" not in st.session_state:
                 sprite=sprite
             )
 
+            # ===================== MELHORIA FORTE NA CARGA DE GERAÇÃO =====================
             gen = None
-            for col in ["generation", "gen", "geracao", "Geração"]:
+            gen_columns = ["Generation", "generation", "Gen", "gen",
+                           "Geração", "geração", "Geracao", "geracao", "Generacao"]
+
+            for col in gen_columns:
                 if col in row and pd.notna(row[col]):
                     try:
                         gen = int(row[col])
                         break
-                    except:
+                    except (ValueError, TypeError):
                         pass
-            pkm.generation = gen if gen is not None else get_generation_by_id(pkm.id)
+
+            # Fallback por ID (muito mais confiável quando a coluna falha)
+            if gen is None or gen == 0:
+                gen = get_generation_by_id(pkm.id)
+
+            pkm.generation = gen
+            # ================================================================================
 
             st.session_state.full_pokedex.append(pkm)
 
+        # === DEBUG DE GERAÇÕES (aparece só uma vez) ===
+        gen_count = Counter(p.generation for p in st.session_state.full_pokedex)
         st.success(f"✅ {len(st.session_state.full_pokedex)} Pokémon carregados!")
+        st.info(f"📊 Gerações carregadas: {dict(sorted(gen_count.items()))}")
+
     except Exception as e:
         st.error(f"Erro ao carregar pokemon_cleaned_pt.csv: {e}")
         st.session_state.full_pokedex = []
 
+# ====================== TABS ======================
 tab1, tab2, tab3, tab4, tab5 = st.tabs([
     "🛠️ Modo Manual",
     "🔬 Análise Avançada",
@@ -205,7 +220,7 @@ with tab1:
 
 with tab4:
     st.header("🤖 Gerar Time Completo com IA")
-    st.caption("Usando pokemon_cleaned_pt.csv + Filtragem inteligente por geração (Gen 1 a Gen 9)")
+    st.caption("Usando pokemon_cleaned_pt.csv + Detecção inteligente de geração (Gen 1 a Gen 9)")
 
     user_prompt = st.text_area(
         "Descreva o time",
@@ -224,17 +239,25 @@ with tab4:
         with st.spinner("🔍 IA analisando..."):
             filtered = st.session_state.full_pokedex.copy()
 
-            # ===================== NOVA LÓGICA DE GERAÇÃO =====================
+            # ===================== FILTRAGEM POR GERAÇÃO =====================
             gen_filter = extrair_geracao_do_prompt(user_prompt)
 
             if gen_filter:
+                original_len = len(filtered)
                 filtered = [p for p in filtered if getattr(p, 'generation', 0) == gen_filter]
-                st.success(f"✅ Filtrado para **Gen {gen_filter}**")
+
+                if len(filtered) == 0:
+                    # FALLBACK POR ID (caso a coluna de geração esteja com problema)
+                    filtered = [p for p in st.session_state.full_pokedex
+                                if get_generation_by_id(p.id) == gen_filter]
+                    st.warning(f"⚠️ Usando fallback por ID para Gen {gen_filter}")
+                else:
+                    st.success(f"✅ Filtrado para **Gen {gen_filter}** ({len(filtered)} Pokémon)")
             else:
                 st.info("🔄 Nenhuma geração específica detectada → usando todos os Pokémon")
-            # ==================================================================
+            # ============================================================
 
-            # Filtro por tipo (mantido exatamente como estava)
+            # Filtro por tipo (mantido igual)
             type_map = {
                 "fogo": "Fire", "água": "Water", "grama": "Grass", "eletrico": "Electric",
                 "gelo": "Ice", "lutador": "Fighting", "veneno": "Poison", "terra": "Ground",
@@ -242,8 +265,8 @@ with tab4:
                 "fantasma": "Ghost", "dragão": "Dragon", "sombrio": "Dark", "fada": "Fairy",
                 "aço": "Steel", "normal": "Normal"
             }
-            single_type = None
             prompt_lower = user_prompt.lower()
+            single_type = None
             for pt, en in type_map.items():
                 if pt in prompt_lower:
                     single_type = en
@@ -253,11 +276,13 @@ with tab4:
 
             if len(filtered) < 6:
                 st.error(f"❌ Só encontrei {len(filtered)} Pokémon com esses filtros.")
+                gen_count = Counter(p.generation for p in st.session_state.full_pokedex)
+                st.info(f"ℹ️ Gerações no dataset: {dict(sorted(gen_count.items()))}")
                 st.stop()
 
             generated = random.sample(filtered, 6)
             st.session_state.last_generated_team = generated
-            st.success(f"✅ Time gerado! (Geração {gen_filter or 'qualquer'})")
+            st.success(f"✅ Time gerado com sucesso! (Gen {gen_filter or 'qualquer'})")
 
             st.subheader("Seu time gerado pela IA")
             for idx, pkm in enumerate(generated):
@@ -303,5 +328,4 @@ if team.pokemon:
 else:
     st.info("Adicione Pokémon para exportar.")
 
-st.caption(
-    "✅ pokemon_cleaned_pt.csv + Detecção automática de geração (gen/geração/g + número) + atributo generation corrigido")
+st.caption("✅ Versão corrigida - Coluna Generation detectada + fallback por ID + debug completo")
