@@ -39,10 +39,16 @@ def get_generation_by_id(pkm_id):
 def extrair_geracao_do_prompt(prompt: str):
     if not prompt: return None
     prompt = prompt.lower().strip()
-    padroes = [r'(?:gen|geração|geracao|generação|g)\s*(\d+)', r'g(\d+)', r'(\d+)[ªa]?\s*(?:gen|geração|geracao|generação)', r'(?:gen|geração|geracao|generação)\s*(\d+)[ªa]?']
+    padroes = [
+        r'(?:gen|geração|geracao|generação|g)\s*(\d+)',
+        r'g(\d+)',
+        r'(\d+)[ªa]?\s*(?:gen|geração|geracao|generação)',
+        r'(?:gen|geração|geracao|generação)\s*(\d+)[ªa]?'
+    ]
     for padrao in padroes:
         match = re.search(padrao, prompt)
-        if match: return int(match.group(1))
+        if match:
+            return int(match.group(1))
     return None
 
 pt_to_en = {
@@ -55,6 +61,39 @@ pt_to_en = {
     "Sombrio": "Dark", "Fada": "Fairy", "Aço": "Steel", "Normal": "Normal"
 }
 
+type_chart = {
+    "Normal":   {"Rock":0.5, "Ghost":0, "Steel":0.5},
+    "Fire":     {"Fire":0.5, "Water":0.5, "Grass":2, "Ice":2, "Bug":2, "Rock":0.5, "Dragon":0.5, "Steel":2},
+    "Water":    {"Fire":2, "Water":0.5, "Grass":0.5, "Ground":2, "Rock":2, "Dragon":0.5},
+    "Grass":    {"Fire":0.5, "Water":2, "Grass":0.5, "Poison":0.5, "Ground":2, "Flying":0.5, "Bug":0.5, "Rock":2, "Dragon":0.5, "Steel":0.5},
+    "Electric": {"Water":2, "Grass":0.5, "Electric":0.5, "Ground":0, "Flying":2, "Dragon":0.5},
+    "Ice":      {"Fire":0.5, "Water":0.5, "Grass":2, "Ice":0.5, "Ground":2, "Flying":2, "Dragon":2, "Steel":0.5},
+    "Fighting": {"Normal":2, "Ice":2, "Poison":0.5, "Flying":0.5, "Psychic":0.5, "Bug":0.5, "Rock":2, "Ghost":0, "Dark":2, "Steel":2, "Fairy":0.5},
+    "Poison":   {"Grass":2, "Poison":0.5, "Ground":0.5, "Rock":0.5, "Ghost":0.5, "Steel":0, "Fairy":2},
+    "Ground":   {"Fire":2, "Grass":0.5, "Electric":2, "Poison":2, "Flying":0, "Bug":0.5, "Rock":2, "Steel":2},
+    "Flying":   {"Grass":2, "Electric":0.5, "Fighting":2, "Bug":2, "Rock":0.5, "Steel":0.5},
+    "Psychic":  {"Fighting":2, "Poison":2, "Psychic":0.5, "Dark":0, "Steel":0.5},
+    "Bug":      {"Fire":0.5, "Grass":2, "Fighting":0.5, "Poison":0.5, "Flying":0.5, "Psychic":2, "Ghost":0.5, "Dark":2, "Steel":0.5, "Fairy":0.5},
+    "Rock":     {"Fire":2, "Ice":2, "Fighting":0.5, "Ground":0.5, "Flying":2, "Bug":2, "Steel":0.5},
+    "Ghost":    {"Normal":0, "Psychic":2, "Ghost":2, "Dark":0.5},
+    "Dragon":   {"Dragon":2, "Steel":0.5, "Fairy":0},
+    "Dark":     {"Fighting":0.5, "Psychic":2, "Ghost":2, "Dark":0.5, "Fairy":0.5},
+    "Steel":    {"Fire":0.5, "Water":0.5, "Electric":0.5, "Ice":2, "Rock":2, "Steel":0.5, "Fairy":2},
+    "Fairy":    {"Fire":0.5, "Fighting":2, "Poison":0.5, "Dragon":2, "Dark":2, "Steel":0.5}
+}
+
+def get_defensive_coverage(team):
+    if not team.pokemon:
+        return {}
+    coverage = {t: 1.0 for t in type_chart.keys()}
+    for pkm in team.pokemon:
+        for atk_type in coverage:
+            multiplier = 1.0
+            for def_type in [t.value for t in pkm.types]:
+                multiplier *= type_chart.get(atk_type, {}).get(def_type, 1.0)
+            coverage[atk_type] = max(coverage[atk_type], multiplier)
+    return coverage
+
 if "full_pokedex" not in st.session_state:
     try:
         df = pd.read_csv("data/pokemon_cleaned_pt.csv")
@@ -62,8 +101,10 @@ if "full_pokedex" not in st.session_state:
         for _, row in df.iterrows():
             pkm_id = int(row.get("id_pokedex", row.get("id", 0)))
             nome = str(row.get("nome", "")).strip()
-            try: gen = int(row["geracao"])
-            except: gen = get_generation_by_id(pkm_id)
+            try:
+                gen = int(row["geracao"])
+            except:
+                gen = get_generation_by_id(pkm_id)
             types = []
             if pd.notna(row.get("tipo_1")):
                 tipo_pt = str(row["tipo_1"]).strip().title()
@@ -79,8 +120,14 @@ if "full_pokedex" not in st.session_state:
             for col in ["habilidade_1", "habilidade_2", "habilidade_oculta"]:
                 if col in row and pd.notna(row[col]):
                     abilities.extend([a.strip().title() for a in str(row[col]).split(",") if a.strip()])
-            pkm = Pokemon(id=pkm_id, name=nome.replace("-", " ").title(), types=types,
-                          abilities=list(dict.fromkeys(abilities)), base_stats={}, sprite=sprite)
+            pkm = Pokemon(
+                id=pkm_id,
+                name=nome.replace("-", " ").title(),
+                types=types,
+                abilities=list(dict.fromkeys(abilities)),
+                base_stats={},
+                sprite=sprite
+            )
             pkm.generation = gen
             st.session_state.full_pokedex.append(pkm)
         st.success(f"✅ {len(st.session_state.full_pokedex)} Pokémon carregados!")
@@ -89,19 +136,22 @@ if "full_pokedex" not in st.session_state:
         st.session_state.full_pokedex = []
 
 tab1, tab2, tab3, tab4, tab5 = st.tabs([
-    "🛠️ Modo Manual", "🔬 Análise Avançada", "🧠 Recomendações Inteligentes",
-    "🤖 Gerar com IA", "🌟 Modo IA Híbrido + Simulador"
+    "🛠️ Modo Manual",
+    "🔬 Análise Avançada",
+    "🧠 Recomendações Inteligentes",
+    "🤖 Gerar com IA",
+    "🌟 Modo IA Híbrido + Simulador"
 ])
 
-# ====================== TAB 1 - MANUAL (PERFEITO - NÃO MEXI) ======================
 with tab1:
     st.header("Monte seu Time Manualmente")
     col_busca, col_time = st.columns([2, 3])
+
     with col_busca:
         st.subheader("🔍 Buscar Pokémon")
         pokemon_name = st.text_input("Nome do Pokémon (em inglês)", placeholder="pikachu").strip().lower()
+
         if st.button("➕ Buscar e Adicionar", type="primary", use_container_width=True):
-            # ... (código original do manual - intacto)
             if pokemon_name:
                 try:
                     if pokemon_name in st.session_state.pokemon_cache:
@@ -110,11 +160,14 @@ with tab1:
                         r = requests.get(f"https://pokeapi.co/api/v2/pokemon/{pokemon_name.replace(' ', '-')}", timeout=10)
                         if r.status_code == 200:
                             data = r.json()
-                            pkm = Pokemon(id=data["id"], name=data["name"].replace("-", " ").title(),
-                                          types=[Type(t["type"]["name"].title()) for t in data["types"]],
-                                          abilities=[a["ability"]["name"].replace("-", " ").title() for a in data["abilities"]],
-                                          base_stats={stat["stat"]["name"]: stat["base_stat"] for stat in data["stats"]},
-                                          sprite=data["sprites"]["front_default"])
+                            pkm = Pokemon(
+                                id=data["id"],
+                                name=data["name"].replace("-", " ").title(),
+                                types=[Type(t["type"]["name"].title()) for t in data["types"]],
+                                abilities=[a["ability"]["name"].replace("-", " ").title() for a in data["abilities"]],
+                                base_stats={stat["stat"]["name"]: stat["base_stat"] for stat in data["stats"]},
+                                sprite=data["sprites"]["front_default"]
+                            )
                             pkm.generation = get_generation_by_id(pkm.id)
                             st.session_state.pokemon_cache[pokemon_name] = pkm
                         else:
@@ -127,6 +180,7 @@ with tab1:
                         st.error("❌ Time completo! (máximo 6)")
                 except Exception as e:
                     st.error(f"Erro: {e}")
+
     with col_time:
         st.subheader("Seu Time Atual")
         team = st.session_state.current_team
@@ -148,7 +202,6 @@ with tab1:
         else:
             st.info("Time vazio. Adicione Pokémon acima.")
 
-# ====================== TAB 2 - ANÁLISE AVANÇADA (AGORA FUNCIONAL) ======================
 with tab2:
     st.header("🔬 Análise Avançada")
     team = st.session_state.current_team
@@ -161,18 +214,37 @@ with tab2:
         tipos = ', '.join(t.value for t in pkm.types)
         st.write(f"• **{pkm.name}** – {tipos} | Gen {getattr(pkm, 'generation', '?')}")
 
-    # Análise de cobertura de tipos (defensiva)
     st.subheader("📊 Cobertura Defensiva")
-    # (Implementação simples mas útil - pode ser expandida depois)
-    st.info("🔄 Análise completa de fraquezas e resistências em desenvolvimento. Por enquanto mostro os tipos do time:")
-    team_types = set(t.value for pkm in team.pokemon for t in pkm.types)
-    st.write("**Tipos presentes no time:**", ", ".join(sorted(team_types)) if team_types else "Nenhum")
+    coverage = get_defensive_coverage(team)
+
+    col1, col2 = st.columns([3, 2])
+    with col1:
+        st.write("**Multiplicador de dano recebido por tipo de ataque:**")
+        for atk_type, multiplier in sorted(coverage.items(), key=lambda x: x[1], reverse=True):
+            if multiplier >= 2:
+                st.error(f"🔴 **{atk_type}** → {multiplier}x (Fraqueza grave)")
+            elif multiplier > 1:
+                st.warning(f"🟠 **{atk_type}** → {multiplier}x (Fraqueza)")
+            elif multiplier == 0:
+                st.success(f"🟢 **{atk_type}** → Imune")
+            elif multiplier < 1:
+                st.success(f"🟢 **{atk_type}** → {multiplier}x (Resistente)")
+            else:
+                st.write(f"⚪ **{atk_type}** → {multiplier}x (Neutro)")
+
+    with col2:
+        st.write("**Resumo:**")
+        weak = sum(1 for v in coverage.values() if v > 1)
+        immune = sum(1 for v in coverage.values() if v == 0)
+        strong = sum(1 for v in coverage.values() if v < 1)
+        st.metric("Fraquezas graves", weak)
+        st.metric("Imunidades", immune)
+        st.metric("Resistências", strong)
 
     st.subheader("💡 Sugestões rápidas de melhoria")
-    st.write("• Adicione Pokémon com tipos que cubram as fraquezas atuais do time.")
-    st.write("• Verifique sinergia entre ataques e defesas.")
+    st.write("• Adicione Pokémon que cubram as fraquezas mostradas acima.")
+    st.write("• Priorize Pokémon com imunidades ou resistências aos tipos mais perigosos.")
 
-# ====================== TAB 3 - RECOMENDAÇÕES INTELIGENTES (AGORA FUNCIONAL) ======================
 with tab3:
     st.header("🧠 Recomendações Inteligentes")
     team = st.session_state.current_team
@@ -181,7 +253,6 @@ with tab3:
         st.stop()
 
     st.subheader("Sugestões para completar seu time")
-    # Recomenda Pokémon que adicionam novos tipos ou repetem bons tipos
     current_types = {t.value for pkm in team.pokemon for t in pkm.types}
     recommended = []
     for pkm in st.session_state.full_pokedex:
@@ -190,9 +261,8 @@ with tab3:
         new_types = pkm_types - current_types
         if new_types:
             recommended.append((pkm, len(new_types)))
-
     recommended.sort(key=lambda x: x[1], reverse=True)
-    recommended = recommended[:6]  # top 6
+    recommended = recommended[:6]
 
     if recommended:
         for pkm, new_count in recommended:
@@ -212,12 +282,15 @@ with tab3:
     else:
         st.info("Seu time já tem ótima cobertura de tipos!")
 
-# ====================== TAB 4 - GERAR COM IA (PERFEITO - NÃO MEXI) ======================
 with tab4:
     st.header("🤖 Gerar Time Completo com IA")
     st.caption("Usando pokemon_cleaned_pt.csv + Filtro por Geração + Tipo")
 
-    user_prompt = st.text_area("Descreva o time", placeholder="time de água gen 9", height=100)
+    user_prompt = st.text_area(
+        "Descreva o time",
+        placeholder="time de água gen 9",
+        height=100
+    )
 
     if st.button("🚀 Gerar Time com IA", type="primary", use_container_width=True):
         if not st.session_state.full_pokedex or not user_prompt.strip():
@@ -229,7 +302,7 @@ with tab4:
             gen_filter = extrair_geracao_do_prompt(user_prompt)
             if gen_filter:
                 filtered = [p for p in filtered if getattr(p, 'generation', 0) == gen_filter]
-                if not filtered:
+                if len(filtered) == 0:
                     filtered = [p for p in st.session_state.full_pokedex if get_generation_by_id(p.id) == gen_filter]
                 st.success(f"✅ Filtrado para **Gen {gen_filter}** ({len(filtered)} Pokémon)")
 
@@ -282,7 +355,7 @@ with tab4:
 
 with tab5:
     st.header("🌟 Modo IA Híbrido + Simulador")
-    st.info("🔄 Em breve...")
+    st.info("🔄 Em breve: geração híbrida + simulador de batalhas contra times rivais!")
 
 st.divider()
 st.subheader("📤 Exportação Rápida")
@@ -301,4 +374,4 @@ if team.pokemon:
 else:
     st.info("Adicione Pokémon para exportar.")
 
-st.caption("Análise Avançada + Recomendações Inteligentes agora funcionais")
+st.caption("Análise Avançada com Cobertura Defensiva completa")
