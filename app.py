@@ -88,7 +88,7 @@ def render_pokemon_card(pkm, show_remove=False, index=None, key_prefix="card"):
         # Cabeçalho
         col_h1, col_h2 = st.columns([4, 1])
         with col_h1:
-            st.markdown(f"<div style='background:{card_color}; color:white; padding:6px 12px; border-radius:8px; font-size:0.85rem; font-weight:bold; text-align:center;'>BASIC</div>", unsafe_allow_html=True)
+            st.markdown(f"<div style='background:{card_color}; color:white; padding:6px 14px; border-radius:8px; font-size:0.85rem; font-weight:bold; text-align:center;'>BASIC</div>", unsafe_allow_html=True)
         with col_h2:
             st.markdown(f"<div style='background:#2E2E2E; color:white; padding:6px 8px; border-radius:8px; font-size:1.05rem; font-weight:bold; text-align:center;'>HP {stats.get('HP', 0)}</div>", unsafe_allow_html=True)
 
