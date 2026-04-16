@@ -194,12 +194,6 @@ with tab1:
 with tab2:
     st.header("🔬 Análise Avançada")
     st.info("🔄 Em breve: análise de sinergia, fraquezas do time, cobertura de tipos e mais!")
-    if st.session_state.current_team.pokemon:
-        st.subheader("Seu time atual")
-        for pkm in st.session_state.current_team.pokemon:
-            st.write(f"• {pkm.name} (Gen {getattr(pkm, 'generation', '?')})")
-    else:
-        st.warning("Monte um time primeiro para analisar!")
 
 with tab3:
     st.header("🧠 Recomendações Inteligentes")
@@ -251,37 +245,38 @@ with tab4:
             st.session_state.last_generated_team = generated
             st.success(f"✅ Time gerado com sucesso! (Gen {gen_filter or 'qualquer'})")
 
-            st.subheader("Seu time gerado pela IA")
-            for idx, pkm in enumerate(generated):
-                sprite_url = pkm.sprite
-                if not sprite_url or "http" not in str(sprite_url):
-                    try:
-                        name_lower = pkm.name.lower().replace(" ", "-")
-                        r = requests.get(f"https://pokeapi.co/api/v2/pokemon/{name_lower}", timeout=8)
-                        if r.status_code == 200:
-                            sprite_url = r.json()["sprites"]["front_default"]
-                    except:
-                        sprite_url = None
+    # ====================== EXIBIÇÃO DO TIME GERADO (AGORA FORA DO BOTÃO) ======================
+    if st.session_state.last_generated_team:
+        st.subheader("Seu time gerado pela IA")
+        for idx, pkm in enumerate(st.session_state.last_generated_team):
+            sprite_url = pkm.sprite
+            if not sprite_url or "http" not in str(sprite_url):
+                try:
+                    name_lower = pkm.name.lower().replace(" ", "-")
+                    r = requests.get(f"https://pokeapi.co/api/v2/pokemon/{name_lower}", timeout=8)
+                    if r.status_code == 200:
+                        sprite_url = r.json()["sprites"]["front_default"]
+                except:
+                    sprite_url = None
 
-                with st.container(border=True):
-                    cols = st.columns([1, 4, 2])
-                    with cols[0]:
-                        if sprite_url: st.image(sprite_url, width=90)
-                    with cols[1]:
-                        st.markdown(f"**{pkm.name}**")
-                        tipos = ', '.join(t.value for t in pkm.types) if pkm.types else '—'
-                        gen = getattr(pkm, 'generation', '?')
-                        st.caption(f"Tipos: {tipos} | Gen {gen}")
-                    with cols[2]:
-                        # BOTÃO CORRIGIDO E OTIMIZADO
-                        if st.button("➕ Adicionar ao meu time",
-                                    key=f"add_ia_{idx}_{pkm.id}_{hash(pkm.name)}",
-                                    use_container_width=True):
-                            if st.session_state.current_team.add_pokemon(pkm):
-                                st.success(f"✅ {pkm.name} adicionado ao seu time!")
-                                st.rerun()          # Força atualização imediata de TODAS as abas
-                            else:
-                                st.error("❌ Time já está completo (máximo 6 Pokémon)!")
+            with st.container(border=True):
+                cols = st.columns([1, 4, 2])
+                with cols[0]:
+                    if sprite_url: st.image(sprite_url, width=90)
+                with cols[1]:
+                    st.markdown(f"**{pkm.name}**")
+                    tipos = ', '.join(t.value for t in pkm.types) if pkm.types else '—'
+                    gen = getattr(pkm, 'generation', '?')
+                    st.caption(f"Tipos: {tipos} | Gen {gen}")
+                with cols[2]:
+                    if st.button("➕ Adicionar ao meu time",
+                                 key=f"add_ia_{idx}_{pkm.id}",
+                                 use_container_width=True):
+                        if st.session_state.current_team.add_pokemon(pkm):
+                            st.success(f"✅ {pkm.name} adicionado ao seu time!")
+                            st.rerun()
+                        else:
+                            st.error("❌ Time já está completo (máximo 6 Pokémon)!")
 
 with tab5:
     st.header("🌟 Modo IA Híbrido + Simulador")
@@ -304,4 +299,4 @@ if team.pokemon:
 else:
     st.info("Adicione Pokémon para exportar.")
 
-st.caption("✅ IA PERFEITA  • Botão 'Adicionar ao meu time' corrigido e otimizado")
+st.caption("✅ • Botão 'Adicionar ao meu time' corrigido e persistente")
