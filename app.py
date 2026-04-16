@@ -87,6 +87,43 @@ type_colors = {
     "Fairy": "#EE99AC", "Normal": "#A8A878"
 }
 
+type_chart = {
+    "Normal": {"Rock": 0.5, "Ghost": 0, "Steel": 0.5},
+    "Fire": {"Fire": 0.5, "Water": 0.5, "Grass": 2, "Ice": 2, "Bug": 2, "Rock": 0.5, "Dragon": 0.5, "Steel": 2},
+    "Water": {"Fire": 2, "Water": 0.5, "Grass": 0.5, "Ground": 2, "Rock": 2, "Dragon": 0.5},
+    "Grass": {"Fire": 0.5, "Water": 2, "Grass": 0.5, "Poison": 0.5, "Ground": 2, "Flying": 0.5, "Bug": 0.5, "Rock": 2,
+              "Dragon": 0.5, "Steel": 0.5},
+    "Electric": {"Water": 2, "Grass": 0.5, "Electric": 0.5, "Ground": 0, "Flying": 2, "Dragon": 0.5},
+    "Ice": {"Fire": 0.5, "Water": 0.5, "Grass": 2, "Ice": 0.5, "Ground": 2, "Flying": 2, "Dragon": 2, "Steel": 0.5},
+    "Fighting": {"Normal": 2, "Ice": 2, "Poison": 0.5, "Flying": 0.5, "Psychic": 0.5, "Bug": 0.5, "Rock": 2, "Ghost": 0,
+                 "Dark": 2, "Steel": 2, "Fairy": 0.5},
+    "Poison": {"Grass": 2, "Poison": 0.5, "Ground": 0.5, "Rock": 0.5, "Ghost": 0.5, "Steel": 0, "Fairy": 2},
+    "Ground": {"Fire": 2, "Grass": 0.5, "Electric": 2, "Poison": 2, "Flying": 0, "Bug": 0.5, "Rock": 2, "Steel": 2},
+    "Flying": {"Grass": 2, "Electric": 0.5, "Fighting": 2, "Bug": 2, "Rock": 0.5, "Steel": 0.5},
+    "Psychic": {"Fighting": 2, "Poison": 2, "Psychic": 0.5, "Dark": 0, "Steel": 0.5},
+    "Bug": {"Fire": 0.5, "Grass": 2, "Fighting": 0.5, "Poison": 0.5, "Flying": 0.5, "Psychic": 2, "Ghost": 0.5,
+            "Dark": 2, "Steel": 0.5, "Fairy": 0.5},
+    "Rock": {"Fire": 2, "Ice": 2, "Fighting": 0.5, "Ground": 0.5, "Flying": 2, "Bug": 2, "Steel": 0.5},
+    "Ghost": {"Normal": 0, "Psychic": 2, "Ghost": 2, "Dark": 0.5},
+    "Dragon": {"Dragon": 2, "Steel": 0.5, "Fairy": 0},
+    "Dark": {"Fighting": 0.5, "Psychic": 2, "Ghost": 2, "Dark": 0.5, "Fairy": 0.5},
+    "Steel": {"Fire": 0.5, "Water": 0.5, "Electric": 0.5, "Ice": 2, "Rock": 2, "Steel": 0.5, "Fairy": 2},
+    "Fairy": {"Fire": 0.5, "Fighting": 2, "Poison": 0.5, "Dragon": 2, "Dark": 2, "Steel": 0.5}
+}
+
+
+def get_defensive_coverage(team):
+    if not team.pokemon:
+        return {}
+    coverage = {t: 1.0 for t in type_chart.keys()}
+    for pkm in team.pokemon:
+        for atk_type in coverage:
+            multiplier = 1.0
+            for def_type in [t.value for t in pkm.types]:
+                multiplier *= type_chart.get(atk_type, {}).get(def_type, 1.0)
+            coverage[atk_type] = max(coverage[atk_type], multiplier)
+    return coverage
+
 
 def get_card_color(primary_type):
     return type_colors.get(primary_type, "#A8A878")
@@ -109,7 +146,6 @@ def render_pokemon_card(pkm, show_remove=False, index=None, key_prefix="card"):
                 f"<div style='background:#2E2E2E; color:white; padding:6px 8px; border-radius:8px; font-size:1.05rem; font-weight:bold; text-align:center;'>HP {stats.get('HP', 0)}</div>",
                 unsafe_allow_html=True)
 
-        # Sprite centralizado
         sprite_url = pkm.sprite
         if not sprite_url or "http" not in str(sprite_url):
             try:
@@ -271,13 +307,7 @@ with tab2:
         st.write(f"• **{pkm.name}** – {tipos} | Gen {getattr(pkm, 'generation', '?')}")
 
     st.subheader("📊 Cobertura Defensiva")
-    coverage = {t: 1.0 for t in type_colors.keys()}
-    for pkm in team.pokemon:
-        for atk_type in coverage:
-            multiplier = 1.0
-            for def_type in [t.value for t in pkm.types]:
-                multiplier *= type_chart.get(atk_type, {}).get(def_type, 1.0) if 'type_chart' in globals() else 1.0
-            coverage[atk_type] = max(coverage[atk_type], multiplier)
+    coverage = get_defensive_coverage(team)
 
     col1, col2 = st.columns([3, 2])
     with col1:
@@ -468,4 +498,4 @@ if team.pokemon:
 else:
     st.info("Adicione Pokémon para exportar.")
 
-st.caption("✅ Sprite centralizado • Todos os módulos funcionando")
+st.caption("✅ Sprite centralizado • Todas as abas funcionando")
