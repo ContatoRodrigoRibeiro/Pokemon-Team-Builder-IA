@@ -28,6 +28,9 @@ if "last_generated_team" not in st.session_state:
 if "hybrid_team" not in st.session_state:
     st.session_state.hybrid_team = []
 
+if "enemy_team" not in st.session_state:
+    st.session_state.enemy_team = []
+
 
 def get_generation_by_id(pkm_id):
     if pkm_id <= 151:
@@ -76,6 +79,14 @@ pt_to_en = {
     "Sombrio": "Dark", "Fada": "Fairy", "Aço": "Steel", "Normal": "Normal"
 }
 
+type_colors = {
+    "Grass": "#78C850", "Fire": "#F08030", "Water": "#6890F0", "Electric": "#F8D030",
+    "Ice": "#98D8D8", "Fighting": "#C03028", "Poison": "#A040A0", "Ground": "#E0C068",
+    "Flying": "#A890F0", "Psychic": "#F85888", "Bug": "#A8B820", "Rock": "#B8A038",
+    "Ghost": "#705898", "Dragon": "#7038F8", "Dark": "#705848", "Steel": "#B8B8D0",
+    "Fairy": "#EE99AC", "Normal": "#A8A878"
+}
+
 type_chart = {
     "Normal": {"Rock": 0.5, "Ghost": 0, "Steel": 0.5},
     "Fire": {"Fire": 0.5, "Water": 0.5, "Grass": 2, "Ice": 2, "Bug": 2, "Rock": 0.5, "Dragon": 0.5, "Steel": 2},
@@ -114,6 +125,65 @@ def get_defensive_coverage(team):
     return coverage
 
 
+def get_card_color(primary_type):
+    return type_colors.get(primary_type, "#A8A878")
+
+
+def render_pokemon_card(pkm, show_remove=False, key_prefix="card"):
+    primary_type = pkm.types[0].value if pkm.types else "Normal"
+    card_color = get_card_color(primary_type)
+    stats = pkm.base_stats
+    bst = getattr(pkm, 'bst', sum(stats.values()) if stats else 0)
+
+    with st.container(border=True):
+        col_header1, col_header2 = st.columns([4, 1])
+        with col_header1:
+            st.markdown(
+                f"<div style='background:{card_color}; color:white; padding:4px 12px; border-radius:8px; font-size:0.9rem; text-align:center;'>BASIC</div>",
+                unsafe_allow_html=True)
+        with col_header2:
+            st.markdown(
+                f"<div style='background:#2E2E2E; color:white; padding:4px 12px; border-radius:8px; font-size:1.1rem; font-weight:bold; text-align:center;'>HP {stats.get('HP', 0)}</div>",
+                unsafe_allow_html=True)
+
+        sprite_url = pkm.sprite
+        if not sprite_url or "http" not in str(sprite_url):
+            try:
+                name_lower = pkm.name.lower().replace(" ", "-")
+                r = requests.get(f"https://pokeapi.co/api/v2/pokemon/{name_lower}", timeout=8)
+                if r.status_code == 200:
+                    sprite_url = r.json()["sprites"]["front_default"]
+            except:
+                sprite_url = None
+        if sprite_url:
+            st.image(sprite_url, use_column_width=True)
+
+        st.markdown(f"<h3 style='text-align:center; margin:8px 0;'>{pkm.name}</h3>", unsafe_allow_html=True)
+
+        type_cols = st.columns(len(pkm.types))
+        for i, t in enumerate(pkm.types):
+            color = get_card_color(t.value)
+            st.markdown(
+                f"<div style='background:{color}; color:white; padding:4px 12px; border-radius:9999px; text-align:center; font-size:0.85rem; font-weight:bold;'>{t.value}</div>",
+                unsafe_allow_html=True)
+
+        st.markdown(f"""
+        <div style="display:flex; justify-content:space-around; background:#1E1E1E; padding:10px; border-radius:12px; margin-top:12px; font-size:0.85rem;">
+            <div><b>ATK</b><br>{stats.get('ATK', 0)}</div>
+            <div><b>DEF</b><br>{stats.get('DEF', 0)}</div>
+            <div><b>SPA</b><br>{stats.get('SPA', 0)}</div>
+            <div><b>SPD</b><br>{stats.get('SPD', 0)}</div>
+            <div><b>SPE</b><br>{stats.get('SPE', 0)}</div>
+            <div style="background:#FFD700; color:#000; padding:4px 8px; border-radius:8px;"><b>BST</b><br>{bst}</div>
+        </div>
+        """, unsafe_allow_html=True)
+
+        if show_remove:
+            if st.button("🗑️ Remover", key=f"{key_prefix}_{pkm.id}", use_container_width=True):
+                st.session_state.current_team.remove_pokemon_by_id(pkm.id)
+                st.rerun()
+
+
 if "full_pokedex" not in st.session_state:
     try:
         df = pd.read_csv("data/pokemon_cleaned_pt.csv")
@@ -125,6 +195,7 @@ if "full_pokedex" not in st.session_state:
                 gen = int(row["geracao"])
             except:
                 gen = get_generation_by_id(pkm_id)
+
             types = []
             if pd.notna(row.get("tipo_1")):
                 tipo_pt = str(row["tipo_1"]).strip().title()
@@ -135,20 +206,34 @@ if "full_pokedex" not in st.session_state:
                 tipo_en = pt_to_en.get(tipo_pt, tipo_pt)
                 if tipo_en not in [t.value for t in types]:
                     types.append(Type(tipo_en))
+
             sprite = str(row.get("url_sprite", "")).strip() or None
+
+            base_stats = {
+                "HP": int(row.get("hp", 0)),
+                "ATK": int(row.get("ataque", 0)),
+                "DEF": int(row.get("defesa", 0)),
+                "SPA": int(row.get("ataque_especial", 0)),
+                "SPD": int(row.get("defesa_especial", 0)),
+                "SPE": int(row.get("velocidade", 0))
+            }
+            bst = sum(base_stats.values())
+
             abilities = []
             for col in ["habilidade_1", "habilidade_2", "habilidade_oculta"]:
                 if col in row and pd.notna(row[col]):
                     abilities.extend([a.strip().title() for a in str(row[col]).split(",") if a.strip()])
+
             pkm = Pokemon(
                 id=pkm_id,
                 name=nome.replace("-", " ").title(),
                 types=types,
                 abilities=list(dict.fromkeys(abilities)),
-                base_stats={},
+                base_stats=base_stats,
                 sprite=sprite
             )
             pkm.generation = gen
+            pkm.bst = bst
             st.session_state.full_pokedex.append(pkm)
         st.success(f"✅ {len(st.session_state.full_pokedex)} Pokémon carregados!")
     except Exception as e:
@@ -206,20 +291,10 @@ with tab1:
         st.subheader("Seu Time Atual")
         team = st.session_state.current_team
         if team.pokemon:
+            cols = st.columns(len(team.pokemon))
             for i, pkm in enumerate(team.pokemon):
-                with st.container(border=True):
-                    cols = st.columns([1, 4, 1])
-                    with cols[0]:
-                        if pkm.sprite: st.image(pkm.sprite, width=90)
-                    with cols[1]:
-                        st.markdown(f"**{pkm.name}**")
-                        tipos = ', '.join(t.value for t in pkm.types) if pkm.types else '—'
-                        gen = getattr(pkm, 'generation', '?')
-                        st.caption(f"Tipos: {tipos} | Gen {gen}")
-                    with cols[2]:
-                        if st.button("🗑️", key=f"remove_{i}"):
-                            team.remove_pokemon(i)
-                            st.rerun()
+                with cols[i]:
+                    render_pokemon_card(pkm, show_remove=True, key_prefix=f"manual_{i}")
         else:
             st.info("Time vazio. Adicione Pokémon acima.")
 
@@ -307,11 +382,7 @@ with tab4:
     st.header("🤖 Gerar Time Completo com IA")
     st.caption("Usando pokemon_cleaned_pt.csv + Filtro por Geração + Tipo")
 
-    user_prompt = st.text_area(
-        "Descreva o time",
-        placeholder="time de água gen 9",
-        height=100
-    )
+    user_prompt = st.text_area("Descreva o time", placeholder="time de água gen 9", height=100)
 
     if st.button("🚀 Gerar Time com IA", type="primary", use_container_width=True):
         if not st.session_state.full_pokedex or not user_prompt.strip():
@@ -347,32 +418,10 @@ with tab4:
 
     if st.session_state.last_generated_team:
         st.subheader("Seu time gerado pela IA")
+        cols = st.columns(len(st.session_state.last_generated_team))
         for idx, pkm in enumerate(st.session_state.last_generated_team):
-            sprite_url = pkm.sprite
-            if not sprite_url or "http" not in str(sprite_url):
-                try:
-                    name_lower = pkm.name.lower().replace(" ", "-")
-                    r = requests.get(f"https://pokeapi.co/api/v2/pokemon/{name_lower}", timeout=8)
-                    if r.status_code == 200:
-                        sprite_url = r.json()["sprites"]["front_default"]
-                except:
-                    sprite_url = None
-            with st.container(border=True):
-                cols = st.columns([1, 4, 2])
-                with cols[0]:
-                    if sprite_url: st.image(sprite_url, width=90)
-                with cols[1]:
-                    st.markdown(f"**{pkm.name}**")
-                    tipos = ', '.join(t.value for t in pkm.types) if pkm.types else '—'
-                    gen = getattr(pkm, 'generation', '?')
-                    st.caption(f"Tipos: {tipos} | Gen {gen}")
-                with cols[2]:
-                    if st.button("➕ Adicionar ao meu time", key=f"add_ia_{idx}_{pkm.id}", use_container_width=True):
-                        if st.session_state.current_team.add_pokemon(pkm):
-                            st.success(f"✅ {pkm.name} adicionado!")
-                            st.rerun()
-                        else:
-                            st.error("❌ Time completo (máximo 6)!")
+            with cols[idx]:
+                render_pokemon_card(pkm, show_remove=False, key_prefix=f"gen_{idx}")
 
 with tab5:
     st.header("🌟 Modo IA Híbrido + Simulador")
@@ -400,40 +449,19 @@ with tab5:
     st.subheader("Seu Time Atual")
     team = st.session_state.current_team
     if team.pokemon:
+        cols = st.columns(len(team.pokemon))
         for i, pkm in enumerate(team.pokemon):
-            with st.container(border=True):
-                cols = st.columns([1, 4, 1])
-                with cols[0]:
-                    if pkm.sprite: st.image(pkm.sprite, width=70)
-                with cols[1]:
-                    st.markdown(f"**{pkm.name}**")
-                    tipos = ', '.join(t.value for t in pkm.types)
-                    st.caption(f"Tipos: {tipos} | Gen {getattr(pkm, 'generation', '?')}")
-                with cols[2]:
-                    if st.button("🗑️", key=f"hybrid_remove_{i}"):
-                        team.remove_pokemon(i)
-                        st.rerun()
+            with cols[i]:
+                render_pokemon_card(pkm, show_remove=True, key_prefix=f"hybrid_{i}")
     else:
         st.info("Time vazio.")
 
     if st.session_state.hybrid_team:
         st.subheader("Time Sugerido pela IA (Híbrido)")
+        cols = st.columns(len(st.session_state.hybrid_team))
         for idx, pkm in enumerate(st.session_state.hybrid_team):
-            with st.container(border=True):
-                cols = st.columns([1, 4, 2])
-                with cols[0]:
-                    if pkm.sprite: st.image(pkm.sprite, width=70)
-                with cols[1]:
-                    st.markdown(f"**{pkm.name}**")
-                    tipos = ', '.join(t.value for t in pkm.types)
-                    st.caption(f"Tipos: {tipos} | Gen {getattr(pkm, 'generation', '?')}")
-                with cols[2]:
-                    if st.button("➕ Usar este Pokémon", key=f"hybrid_add_{idx}"):
-                        if st.session_state.current_team.add_pokemon(pkm):
-                            st.success(f"✅ {pkm.name} adicionado ao seu time!")
-                            st.rerun()
-                        else:
-                            st.error("Time completo!")
+            with cols[idx]:
+                render_pokemon_card(pkm, show_remove=False, key_prefix=f"hybrid_add_{idx}")
 
     if "enemy_team" in st.session_state:
         st.subheader("⚔️ Simulação de Batalha")
@@ -448,7 +476,6 @@ with tab5:
             for p in st.session_state.enemy_team:
                 st.write(f"• {p.name}")
 
-        # Simulação simples
         your_score = sum(1 for p in st.session_state.current_team.pokemon if random.random() > 0.4)
         enemy_score = 6 - your_score + random.randint(-1, 2)
         if your_score > enemy_score:
@@ -475,5 +502,4 @@ if team.pokemon:
 else:
     st.info("Adicione Pokémon para exportar.")
 
-st.caption(
-    "✅ Modo Manual + Gerar com IA perfeitos • Análise Avançada + Cobertura Defensiva • Modo IA Híbrido + Simulador agora ativo")
+st.caption("✅ Estética em cards premium • Todas as funções ativas")
