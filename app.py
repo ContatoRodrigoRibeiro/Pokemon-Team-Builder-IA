@@ -142,7 +142,6 @@ TYPE_CHART = {
 
 
 def get_multiplier(attacker_type: str, defender_types: list) -> float:
-    """Calcula multiplicador de dano contra um Pokémon (considera dual types)."""
     multiplier = 1.0
     for defender in defender_types:
         d_value = defender.value if isinstance(defender, Type) else str(defender)
@@ -151,7 +150,6 @@ def get_multiplier(attacker_type: str, defender_types: list) -> float:
 
 
 def analyze_team_weaknesses(team: Team):
-    """Retorna as fraquezas mais críticas do time inteiro."""
     if not team.pokemon:
         return []
     weakness_score = defaultdict(float)
@@ -161,13 +159,11 @@ def analyze_team_weaknesses(team: Team):
             mult = get_multiplier(atk_type, p_types)
             if mult > 1.0:
                 weakness_score[atk_type] += mult
-    # Ordena por gravidade
     sorted_weak = sorted(weakness_score.items(), key=lambda x: x[1], reverse=True)
     return sorted_weak[:8]
 
 
 def analyze_team_coverage(team: Team):
-    """Retorna tipos que o time ataca com super efetividade."""
     if not team.pokemon:
         return []
     coverage = defaultdict(float)
@@ -181,7 +177,6 @@ def analyze_team_coverage(team: Team):
 
 
 def calculate_synergy_score(team: Team) -> int:
-    """Pontuação de sinergia (baseada em diversidade de tipos e quantidade)."""
     if not team.pokemon:
         return 0
     type_set = set(t.value for pkm in team.pokemon for t in pkm.types)
@@ -302,7 +297,7 @@ with tab1:
         else:
             st.info("Time vazio. Adicione Pokémon acima.")
 
-# ====================== TAB 2 - ANÁLISE AVANÇADA (COMPLETO) ======================
+# ====================== TAB 2 - ANÁLISE AVANÇADA ======================
 with tab2:
     st.header("🔬 Análise Avançada")
     team = st.session_state.current_team
@@ -335,8 +330,7 @@ with tab2:
 
         st.divider()
         synergy = calculate_synergy_score(team)
-        st.metric("Pontuação de Sinergia do Time", f"{synergy}/100",
-                  help="Baseado em diversidade de tipos, equilíbrio e quantidade de Pokémon")
+        st.metric("Pontuação de Sinergia do Time", f"{synergy}/100")
         if synergy >= 80:
             st.success("🎉 Time muito equilibrado e sinérgico!")
         elif synergy >= 60:
@@ -344,9 +338,7 @@ with tab2:
         else:
             st.warning("⚠️ Precisa de ajustes para maior sinergia")
 
-        st.caption("Análise completa de cobertura de tipos, fraquezas e sinergia implementada!")
-
-# ====================== TAB 3 - RECOMENDAÇÕES INTELIGENTES (COMPLETO) ======================
+# ====================== TAB 3 - RECOMENDAÇÕES INTELIGENTES ======================
 with tab3:
     st.header("🧠 Recomendações Inteligentes")
     team = st.session_state.current_team
@@ -361,9 +353,8 @@ with tab3:
             with st.spinner("Analisando melhorias..."):
                 recommendations = []
                 for pkm in st.session_state.full_pokedex:
-                    if pkm in team.pokemon:
+                    if any(pkm.id == existing.id for existing in team.pokemon):
                         continue
-                    # Sugere Pokémon que cobrem fraquezas ou adicionam tipos novos
                     p_types = [t.value for t in pkm.types]
                     covers_weakness = any(w in p_types for w in weaknesses)
                     new_type = len(set(p_types) - set(t.value for p in team.pokemon for t in p.types)) > 0
@@ -371,17 +362,15 @@ with tab3:
                         recommendations.append(pkm)
                     if len(recommendations) >= 6:
                         break
-
                 if not recommendations:
                     recommendations = random.sample(st.session_state.full_pokedex, 6)
-
                 st.session_state.last_generated_team = recommendations[:6]
-                st.success("✅ Recomendações geradas com base nas fraquezas do seu time!")
+                st.success("✅ Recomendações geradas!")
 
         if st.session_state.last_generated_team:
             st.subheader("Pokémon recomendados")
             for idx, pkm in enumerate(st.session_state.last_generated_team):
-                sprite_url = pkm.sprite or None
+                sprite_url = pkm.sprite
                 with st.container(border=True):
                     cols = st.columns([1, 4, 2])
                     with cols[0]:
@@ -391,14 +380,14 @@ with tab3:
                         tipos = ', '.join(t.value for t in pkm.types)
                         st.caption(f"Tipos: {tipos} | Gen {getattr(pkm, 'generation', '?')}")
                     with cols[2]:
-                        if st.button("➕ Adicionar", key=f"rec_add_{idx}"):
+                        if st.button("➕ Adicionar", key=f"rec_add_{idx}_{pkm.id}"):
                             if st.session_state.current_team.add_pokemon(pkm):
-                                st.success(f"{pkm.name} adicionado!")
+                                st.success(f"✅ {pkm.name} adicionado!")
                                 st.rerun()
                             else:
-                                st.error("Time cheio!")
+                                st.error("❌ Time já está completo!")
 
-# ====================== TAB 4 - GERAR COM IA ======================
+# ====================== TAB 4 - GERAR COM IA (CORRIGIDO) ======================
 with tab4:
     st.header("🤖 Gerar Time Completo com IA")
     st.caption("Usando pokemon_cleaned_pt.csv + Filtro por Geração + Tipo")
@@ -407,6 +396,8 @@ with tab4:
         placeholder="time de água gen 9",
         height=100
     )
+
+    # Botão de gerar
     if st.button("🚀 Gerar Time com IA", type="primary", use_container_width=True):
         if not st.session_state.full_pokedex:
             st.error("Dataset não carregado!")
@@ -437,41 +428,44 @@ with tab4:
             generated = random.sample(filtered, 6)
             st.session_state.last_generated_team = generated
             st.success(f"✅ Time gerado com sucesso! (Gen {gen_filter or 'qualquer'})")
-            st.subheader("Seu time gerado pela IA")
-            for idx, pkm in enumerate(generated):
-                sprite_url = pkm.sprite
-                if not sprite_url or "http" not in str(sprite_url):
-                    try:
-                        name_lower = pkm.name.lower().replace(" ", "-")
-                        r = requests.get(f"https://pokeapi.co/api/v2/pokemon/{name_lower}", timeout=8)
-                        if r.status_code == 200:
-                            sprite_url = r.json()["sprites"]["front_default"]
-                    except:
-                        sprite_url = None
-                with st.container(border=True):
-                    cols = st.columns([1, 4, 2])
-                    with cols[0]:
-                        if sprite_url: st.image(sprite_url, width=90)
-                    with cols[1]:
-                        st.markdown(f"**{pkm.name}**")
-                        tipos = ', '.join(t.value for t in pkm.types) if pkm.types else '—'
-                        gen = getattr(pkm, 'generation', '?')
-                        st.caption(f"Tipos: {tipos} | Gen {gen}")
-                    with cols[2]:
-                        if st.button("➕ Adicionar ao meu time", key=f"add_ia_{idx}_{pkm.id}"):
-                            if st.session_state.current_team.add_pokemon(pkm):
-                                st.success(f"✅ {pkm.name} adicionado ao seu time!")
-                                st.rerun()
-                            else:
-                                st.error("❌ Time já está completo (máximo 6)!")
 
-# ====================== TAB 5 - MODO IA HÍBRIDO + SIMULADOR (COMPLETO) ======================
+    # EXIBIÇÃO DO TIME GERADO - MOVIDO PARA FORA DO IF (AGORA O BOTÃO FUNCIONA!)
+    if st.session_state.last_generated_team:
+        st.subheader("Seu time gerado pela IA")
+        for idx, pkm in enumerate(st.session_state.last_generated_team):
+            sprite_url = pkm.sprite
+            if not sprite_url or "http" not in str(sprite_url):
+                try:
+                    name_lower = pkm.name.lower().replace(" ", "-")
+                    r = requests.get(f"https://pokeapi.co/api/v2/pokemon/{name_lower}", timeout=8)
+                    if r.status_code == 200:
+                        sprite_url = r.json()["sprites"]["front_default"]
+                except:
+                    sprite_url = None
+            with st.container(border=True):
+                cols = st.columns([1, 4, 2])
+                with cols[0]:
+                    if sprite_url: st.image(sprite_url, width=90)
+                with cols[1]:
+                    st.markdown(f"**{pkm.name}**")
+                    tipos = ', '.join(t.value for t in pkm.types) if pkm.types else '—'
+                    gen = getattr(pkm, 'generation', '?')
+                    st.caption(f"Tipos: {tipos} | Gen {gen}")
+                with cols[2]:
+                    # BOTÃO AGORA COM KEY ÚNICA E FORA DO BLOCO CONDICIONAL
+                    if st.button("➕ Adicionar ao meu time", key=f"add_ia_{idx}_{pkm.id}_{pkm.name}"):
+                        if st.session_state.current_team.add_pokemon(pkm):
+                            st.success(f"✅ {pkm.name} adicionado ao seu time!")
+                            st.rerun()
+                        else:
+                            st.error("❌ Time já está completo (máximo 6)!")
+
+# ====================== TAB 5 - MODO IA HÍBRIDO + SIMULADOR ======================
 with tab5:
     st.header("🌟 Modo IA Híbrido + Simulador")
     team = st.session_state.current_team
 
     st.subheader("🔄 Geração Híbrida")
-    st.caption("A IA gera um time e você pode refinar manualmente")
     hybrid_prompt = st.text_input("Descreva o estilo do time (ex: ofensivo dragão gen 9)",
                                   placeholder="ofensivo com dragão")
     if st.button("🧬 Gerar Time Híbrido", type="primary"):
@@ -480,7 +474,6 @@ with tab5:
             gen_filter = extrair_geracao_do_prompt(hybrid_prompt)
             if gen_filter:
                 filtered = [p for p in filtered if getattr(p, 'generation', 0) == gen_filter]
-            # Tipo principal
             prompt_lower = hybrid_prompt.lower()
             single_type = None
             for pt, en in pt_to_en.items():
@@ -491,27 +484,26 @@ with tab5:
                 filtered = [p for p in filtered if any(t.value == single_type for t in p.types)]
             generated = random.sample(filtered, min(6, len(filtered)))
             st.session_state.last_generated_team = generated
-            st.success("Time híbrido gerado! Adicione ou remova no time atual.")
+            st.success("Time híbrido gerado!")
 
     if st.session_state.last_generated_team:
         st.write("**Time sugerido pela IA híbrida:**")
         for pkm in st.session_state.last_generated_team:
             if st.button(f"➕ {pkm.name}", key=f"hybrid_add_{pkm.id}"):
-                st.session_state.current_team.add_pokemon(pkm)
-                st.rerun()
+                if st.session_state.current_team.add_pokemon(pkm):
+                    st.success(f"{pkm.name} adicionado!")
+                    st.rerun()
+                else:
+                    st.error("Time cheio!")
 
     st.divider()
     st.subheader("⚔️ Simulador de Batalhas")
-    st.caption("Simule batalhas contra times rivais (baseado em matchups de tipos)")
-
     if st.button("🚀 Simular Batalha contra Time Rival"):
         if not team.pokemon:
             st.error("Monte seu time primeiro!")
         else:
-            # Gera time rival aleatório
             rival_team = random.sample(st.session_state.full_pokedex, 6)
             st.write("**Seu Time** vs **Time Rival**")
-
             col_me, col_rival = st.columns(2)
             with col_me:
                 st.subheader("Seu Time")
@@ -521,21 +513,16 @@ with tab5:
                 st.subheader("Time Rival")
                 for p in rival_team:
                     st.write(f"• {p.name}")
-
-            # Simulação simples baseada em sinergia
             my_score = calculate_synergy_score(team)
             rival_score = random.randint(40, 95)
             st.metric("Pontuação do seu time", my_score)
             st.metric("Pontuação do rival", rival_score)
-
             if my_score > rival_score:
-                st.success("🏆 VITÓRIA! Seu time é superior nos matchups de tipos.")
+                st.success("🏆 VITÓRIA!")
             elif my_score == rival_score:
                 st.info("⚖️ Empate técnico.")
             else:
-                st.error("❌ Derrota. O rival explorou suas fraquezas.")
-
-            st.caption("Simulador completo implementado (matchups de tipos + sinergia)")
+                st.error("❌ Derrota.")
 
 # ====================== EXPORTAÇÃO ======================
 st.divider()
@@ -547,7 +534,7 @@ if team.pokemon:
     with col1:
         if st.button("📋 Copiar para Pokémon Showdown", use_container_width=True):
             st.code(showdown_text, language="text")
-            st.success("✅ Copiado para a área de transferência!")
+            st.success("✅ Copiado!")
     with col2:
         if st.button("📤 Exportar para PokePaste", use_container_width=True):
             st.success("✅ Pronto para PokePaste!")
@@ -555,4 +542,4 @@ if team.pokemon:
 else:
     st.info("Adicione Pokémon para exportar.")
 
-st.caption("✅ Versão FINAL e COMPLETA - Todos os módulos 'Em breve' desenvolvidos em um único arquivo!")
+st.caption("✅ Versão CORRIGIDA - Botão 'Adicionar ao meu time' na aba IA agora funciona perfeitamente!")
