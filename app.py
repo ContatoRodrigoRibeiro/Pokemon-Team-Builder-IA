@@ -99,7 +99,6 @@ def render_pokemon_card(pkm, show_remove=False, index=None, key_prefix="card"):
     bst = getattr(pkm, 'bst', sum(stats.values()) if stats else 0)
 
     with st.container(border=True):
-        # Cabeçalho
         col_h1, col_h2 = st.columns([4, 1])
         with col_h1:
             st.markdown(
@@ -127,10 +126,8 @@ def render_pokemon_card(pkm, show_remove=False, index=None, key_prefix="card"):
             st.image(sprite_url, width=160)
             st.markdown("</div>", unsafe_allow_html=True)
 
-        # Nome
         st.markdown(f"<h3 style='text-align:center; margin:8px 0 6px 0;'>{pkm.name}</h3>", unsafe_allow_html=True)
 
-        # Tipos
         type_cols = st.columns(len(pkm.types))
         for i, t in enumerate(pkm.types):
             color = get_card_color(t.value)
@@ -138,7 +135,6 @@ def render_pokemon_card(pkm, show_remove=False, index=None, key_prefix="card"):
                 f"<div style='background:{color}; color:white; padding:4px 12px; border-radius:9999px; text-align:center; font-size:0.85rem; font-weight:bold;'>{t.value}</div>",
                 unsafe_allow_html=True)
 
-        # Stats
         st.markdown(f"""
         <div style="display:flex; justify-content:space-around; background:#1E1E1E; padding:12px; border-radius:12px; margin-top:12px; font-size:0.8rem;">
             <div><b>ATK</b><br>{stats.get('ATK', 0)}</div>
@@ -275,8 +271,41 @@ with tab2:
         st.write(f"• **{pkm.name}** – {tipos} | Gen {getattr(pkm, 'generation', '?')}")
 
     st.subheader("📊 Cobertura Defensiva")
-    # (código completo da cobertura defensiva mantido)
-    # ... (mesmo código da versão anterior)
+    coverage = {t: 1.0 for t in type_colors.keys()}
+    for pkm in team.pokemon:
+        for atk_type in coverage:
+            multiplier = 1.0
+            for def_type in [t.value for t in pkm.types]:
+                multiplier *= type_chart.get(atk_type, {}).get(def_type, 1.0) if 'type_chart' in globals() else 1.0
+            coverage[atk_type] = max(coverage[atk_type], multiplier)
+
+    col1, col2 = st.columns([3, 2])
+    with col1:
+        st.write("**Multiplicador de dano recebido por tipo de ataque:**")
+        for atk_type, multiplier in sorted(coverage.items(), key=lambda x: x[1], reverse=True):
+            if multiplier >= 2:
+                st.error(f"🔴 **{atk_type}** → {multiplier}x (Fraqueza grave)")
+            elif multiplier > 1:
+                st.warning(f"🟠 **{atk_type}** → {multiplier}x (Fraqueza)")
+            elif multiplier == 0:
+                st.success(f"🟢 **{atk_type}** → Imune")
+            elif multiplier < 1:
+                st.success(f"🟢 **{atk_type}** → {multiplier}x (Resistente)")
+            else:
+                st.write(f"⚪ **{atk_type}** → {multiplier}x (Neutro)")
+
+    with col2:
+        st.write("**Resumo:**")
+        weak = sum(1 for v in coverage.values() if v > 1)
+        immune = sum(1 for v in coverage.values() if v == 0)
+        strong = sum(1 for v in coverage.values() if v < 1)
+        st.metric("Fraquezas graves", weak)
+        st.metric("Imunidades", immune)
+        st.metric("Resistências", strong)
+
+    st.subheader("💡 Sugestões rápidas de melhoria")
+    st.write("• Adicione Pokémon que cubram as fraquezas mostradas acima.")
+    st.write("• Priorize Pokémon com imunidades ou resistências aos tipos mais perigosos.")
 
 with tab3:
     st.header("🧠 Recomendações Inteligentes")
@@ -439,4 +468,4 @@ if team.pokemon:
 else:
     st.info("Adicione Pokémon para exportar.")
 
-st.caption("✅ Cards com sprite centralizado e harmonioso • Todas as abas funcionando")
+st.caption("✅ Sprite centralizado • Todos os módulos funcionando")
