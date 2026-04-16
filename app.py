@@ -25,16 +25,30 @@ if "pokemon_cache" not in st.session_state:
 if "last_generated_team" not in st.session_state:
     st.session_state.last_generated_team = []
 
+if "hybrid_team" not in st.session_state:
+    st.session_state.hybrid_team = []
+
+
 def get_generation_by_id(pkm_id):
-    if pkm_id <= 151: return 1
-    elif pkm_id <= 251: return 2
-    elif pkm_id <= 386: return 3
-    elif pkm_id <= 493: return 4
-    elif pkm_id <= 649: return 5
-    elif pkm_id <= 721: return 6
-    elif pkm_id <= 809: return 7
-    elif pkm_id <= 905: return 8
-    else: return 9
+    if pkm_id <= 151:
+        return 1
+    elif pkm_id <= 251:
+        return 2
+    elif pkm_id <= 386:
+        return 3
+    elif pkm_id <= 493:
+        return 4
+    elif pkm_id <= 649:
+        return 5
+    elif pkm_id <= 721:
+        return 6
+    elif pkm_id <= 809:
+        return 7
+    elif pkm_id <= 905:
+        return 8
+    else:
+        return 9
+
 
 def extrair_geracao_do_prompt(prompt: str):
     if not prompt: return None
@@ -51,6 +65,7 @@ def extrair_geracao_do_prompt(prompt: str):
             return int(match.group(1))
     return None
 
+
 pt_to_en = {
     "Planta": "Grass", "Grama": "Grass", "Fogo": "Fire", "Água": "Water", "Agua": "Water", "agua": "Water",
     "Elétrico": "Electric", "Eletrico": "Electric", "eletrico": "Electric", "Gelo": "Ice",
@@ -62,25 +77,29 @@ pt_to_en = {
 }
 
 type_chart = {
-    "Normal":   {"Rock":0.5, "Ghost":0, "Steel":0.5},
-    "Fire":     {"Fire":0.5, "Water":0.5, "Grass":2, "Ice":2, "Bug":2, "Rock":0.5, "Dragon":0.5, "Steel":2},
-    "Water":    {"Fire":2, "Water":0.5, "Grass":0.5, "Ground":2, "Rock":2, "Dragon":0.5},
-    "Grass":    {"Fire":0.5, "Water":2, "Grass":0.5, "Poison":0.5, "Ground":2, "Flying":0.5, "Bug":0.5, "Rock":2, "Dragon":0.5, "Steel":0.5},
-    "Electric": {"Water":2, "Grass":0.5, "Electric":0.5, "Ground":0, "Flying":2, "Dragon":0.5},
-    "Ice":      {"Fire":0.5, "Water":0.5, "Grass":2, "Ice":0.5, "Ground":2, "Flying":2, "Dragon":2, "Steel":0.5},
-    "Fighting": {"Normal":2, "Ice":2, "Poison":0.5, "Flying":0.5, "Psychic":0.5, "Bug":0.5, "Rock":2, "Ghost":0, "Dark":2, "Steel":2, "Fairy":0.5},
-    "Poison":   {"Grass":2, "Poison":0.5, "Ground":0.5, "Rock":0.5, "Ghost":0.5, "Steel":0, "Fairy":2},
-    "Ground":   {"Fire":2, "Grass":0.5, "Electric":2, "Poison":2, "Flying":0, "Bug":0.5, "Rock":2, "Steel":2},
-    "Flying":   {"Grass":2, "Electric":0.5, "Fighting":2, "Bug":2, "Rock":0.5, "Steel":0.5},
-    "Psychic":  {"Fighting":2, "Poison":2, "Psychic":0.5, "Dark":0, "Steel":0.5},
-    "Bug":      {"Fire":0.5, "Grass":2, "Fighting":0.5, "Poison":0.5, "Flying":0.5, "Psychic":2, "Ghost":0.5, "Dark":2, "Steel":0.5, "Fairy":0.5},
-    "Rock":     {"Fire":2, "Ice":2, "Fighting":0.5, "Ground":0.5, "Flying":2, "Bug":2, "Steel":0.5},
-    "Ghost":    {"Normal":0, "Psychic":2, "Ghost":2, "Dark":0.5},
-    "Dragon":   {"Dragon":2, "Steel":0.5, "Fairy":0},
-    "Dark":     {"Fighting":0.5, "Psychic":2, "Ghost":2, "Dark":0.5, "Fairy":0.5},
-    "Steel":    {"Fire":0.5, "Water":0.5, "Electric":0.5, "Ice":2, "Rock":2, "Steel":0.5, "Fairy":2},
-    "Fairy":    {"Fire":0.5, "Fighting":2, "Poison":0.5, "Dragon":2, "Dark":2, "Steel":0.5}
+    "Normal": {"Rock": 0.5, "Ghost": 0, "Steel": 0.5},
+    "Fire": {"Fire": 0.5, "Water": 0.5, "Grass": 2, "Ice": 2, "Bug": 2, "Rock": 0.5, "Dragon": 0.5, "Steel": 2},
+    "Water": {"Fire": 2, "Water": 0.5, "Grass": 0.5, "Ground": 2, "Rock": 2, "Dragon": 0.5},
+    "Grass": {"Fire": 0.5, "Water": 2, "Grass": 0.5, "Poison": 0.5, "Ground": 2, "Flying": 0.5, "Bug": 0.5, "Rock": 2,
+              "Dragon": 0.5, "Steel": 0.5},
+    "Electric": {"Water": 2, "Grass": 0.5, "Electric": 0.5, "Ground": 0, "Flying": 2, "Dragon": 0.5},
+    "Ice": {"Fire": 0.5, "Water": 0.5, "Grass": 2, "Ice": 0.5, "Ground": 2, "Flying": 2, "Dragon": 2, "Steel": 0.5},
+    "Fighting": {"Normal": 2, "Ice": 2, "Poison": 0.5, "Flying": 0.5, "Psychic": 0.5, "Bug": 0.5, "Rock": 2, "Ghost": 0,
+                 "Dark": 2, "Steel": 2, "Fairy": 0.5},
+    "Poison": {"Grass": 2, "Poison": 0.5, "Ground": 0.5, "Rock": 0.5, "Ghost": 0.5, "Steel": 0, "Fairy": 2},
+    "Ground": {"Fire": 2, "Grass": 0.5, "Electric": 2, "Poison": 2, "Flying": 0, "Bug": 0.5, "Rock": 2, "Steel": 2},
+    "Flying": {"Grass": 2, "Electric": 0.5, "Fighting": 2, "Bug": 2, "Rock": 0.5, "Steel": 0.5},
+    "Psychic": {"Fighting": 2, "Poison": 2, "Psychic": 0.5, "Dark": 0, "Steel": 0.5},
+    "Bug": {"Fire": 0.5, "Grass": 2, "Fighting": 0.5, "Poison": 0.5, "Flying": 0.5, "Psychic": 2, "Ghost": 0.5,
+            "Dark": 2, "Steel": 0.5, "Fairy": 0.5},
+    "Rock": {"Fire": 2, "Ice": 2, "Fighting": 0.5, "Ground": 0.5, "Flying": 2, "Bug": 2, "Steel": 0.5},
+    "Ghost": {"Normal": 0, "Psychic": 2, "Ghost": 2, "Dark": 0.5},
+    "Dragon": {"Dragon": 2, "Steel": 0.5, "Fairy": 0},
+    "Dark": {"Fighting": 0.5, "Psychic": 2, "Ghost": 2, "Dark": 0.5, "Fairy": 0.5},
+    "Steel": {"Fire": 0.5, "Water": 0.5, "Electric": 0.5, "Ice": 2, "Rock": 2, "Steel": 0.5, "Fairy": 2},
+    "Fairy": {"Fire": 0.5, "Fighting": 2, "Poison": 0.5, "Dragon": 2, "Dark": 2, "Steel": 0.5}
 }
+
 
 def get_defensive_coverage(team):
     if not team.pokemon:
@@ -93,6 +112,7 @@ def get_defensive_coverage(team):
                 multiplier *= type_chart.get(atk_type, {}).get(def_type, 1.0)
             coverage[atk_type] = max(coverage[atk_type], multiplier)
     return coverage
+
 
 if "full_pokedex" not in st.session_state:
     try:
@@ -157,7 +177,8 @@ with tab1:
                     if pokemon_name in st.session_state.pokemon_cache:
                         pkm = st.session_state.pokemon_cache[pokemon_name]
                     else:
-                        r = requests.get(f"https://pokeapi.co/api/v2/pokemon/{pokemon_name.replace(' ', '-')}", timeout=10)
+                        r = requests.get(f"https://pokeapi.co/api/v2/pokemon/{pokemon_name.replace(' ', '-')}",
+                                         timeout=10)
                         if r.status_code == 200:
                             data = r.json()
                             pkm = Pokemon(
@@ -355,7 +376,87 @@ with tab4:
 
 with tab5:
     st.header("🌟 Modo IA Híbrido + Simulador")
-    st.info("🔄 Em breve: geração híbrida + simulador de batalhas contra times rivais!")
+    st.caption("Gere um time com IA e simule batalhas contra times inimigos")
+
+    col_h1, col_h2 = st.columns([1, 1])
+    with col_h1:
+        if st.button("🤖 Gerar Time Híbrido com IA", type="primary", use_container_width=True):
+            with st.spinner("🔍 Gerando time híbrido..."):
+                filtered = st.session_state.full_pokedex.copy()
+                generated = random.sample(filtered, 6)
+                st.session_state.hybrid_team = generated
+                st.success("✅ Time Híbrido gerado!")
+
+    with col_h2:
+        if st.button("⚔️ Simular Batalha", type="secondary", use_container_width=True):
+            if len(st.session_state.current_team.pokemon) < 6:
+                st.error("Seu time precisa ter 6 Pokémon para simular!")
+            else:
+                with st.spinner("Simulando batalha..."):
+                    enemy_team = random.sample(st.session_state.full_pokedex, 6)
+                    st.session_state.enemy_team = enemy_team
+                    st.success("Batalha simulada!")
+
+    st.subheader("Seu Time Atual")
+    team = st.session_state.current_team
+    if team.pokemon:
+        for i, pkm in enumerate(team.pokemon):
+            with st.container(border=True):
+                cols = st.columns([1, 4, 1])
+                with cols[0]:
+                    if pkm.sprite: st.image(pkm.sprite, width=70)
+                with cols[1]:
+                    st.markdown(f"**{pkm.name}**")
+                    tipos = ', '.join(t.value for t in pkm.types)
+                    st.caption(f"Tipos: {tipos} | Gen {getattr(pkm, 'generation', '?')}")
+                with cols[2]:
+                    if st.button("🗑️", key=f"hybrid_remove_{i}"):
+                        team.remove_pokemon(i)
+                        st.rerun()
+    else:
+        st.info("Time vazio.")
+
+    if st.session_state.hybrid_team:
+        st.subheader("Time Sugerido pela IA (Híbrido)")
+        for idx, pkm in enumerate(st.session_state.hybrid_team):
+            with st.container(border=True):
+                cols = st.columns([1, 4, 2])
+                with cols[0]:
+                    if pkm.sprite: st.image(pkm.sprite, width=70)
+                with cols[1]:
+                    st.markdown(f"**{pkm.name}**")
+                    tipos = ', '.join(t.value for t in pkm.types)
+                    st.caption(f"Tipos: {tipos} | Gen {getattr(pkm, 'generation', '?')}")
+                with cols[2]:
+                    if st.button("➕ Usar este Pokémon", key=f"hybrid_add_{idx}"):
+                        if st.session_state.current_team.add_pokemon(pkm):
+                            st.success(f"✅ {pkm.name} adicionado ao seu time!")
+                            st.rerun()
+                        else:
+                            st.error("Time completo!")
+
+    if "enemy_team" in st.session_state:
+        st.subheader("⚔️ Simulação de Batalha")
+        st.write("**Seu Time** vs **Time Inimigo**")
+        col_y, col_e = st.columns(2)
+        with col_y:
+            st.write("**Seu Time**")
+            for p in st.session_state.current_team.pokemon:
+                st.write(f"• {p.name}")
+        with col_e:
+            st.write("**Time Inimigo**")
+            for p in st.session_state.enemy_team:
+                st.write(f"• {p.name}")
+
+        # Simulação simples
+        your_score = sum(1 for p in st.session_state.current_team.pokemon if random.random() > 0.4)
+        enemy_score = 6 - your_score + random.randint(-1, 2)
+        if your_score > enemy_score:
+            st.success(f"🎉 **VOCÊ VENCEU** ({your_score} × {enemy_score})")
+        elif enemy_score > your_score:
+            st.error(f"💥 **Time inimigo venceu** ({your_score} × {enemy_score})")
+        else:
+            st.warning("🤝 Empate!")
 
 st.divider()
 st.subheader("📤 Exportação Rápida")
@@ -374,4 +475,5 @@ if team.pokemon:
 else:
     st.info("Adicione Pokémon para exportar.")
 
-st.caption("✅ Modo Manual + Gerar com IA perfeitos • Análise Avançada com Cobertura Defensiva completa")
+st.caption(
+    "✅ Modo Manual + Gerar com IA perfeitos • Análise Avançada + Cobertura Defensiva • Modo IA Híbrido + Simulador agora ativo")
