@@ -141,6 +141,30 @@ st.markdown("""
         border-radius: 12px !important;
         border: 1px solid #475569 !important;
     }
+    
+    /* Melhoria específica para os cards do time */
+    .stContainer {
+        background: #1e2937 !important;
+        border: 2px solid #475569 !important;
+        border-radius: 18px !important;
+        padding: 16px 12px !important;
+        text-align: center !important;
+        box-shadow: 0 10px 15px -3px rgb(0 0 0 / 0.3);
+        transition: all 0.3s ease;
+    }
+    
+    .stContainer:hover {
+        border-color: #f97316 !important;
+        box-shadow: 0 20px 25px -5px rgb(0 0 0 / 0.3);
+        transform: translateY(-4px);
+    }
+    
+    .stContainer img {
+        border-radius: 12px;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+        margin: 0 auto;
+        display: block;
+    }
 </style>
 """, unsafe_allow_html=True)
 
