@@ -142,28 +142,41 @@ st.markdown("""
         border: 1px solid #475569 !important;
     }
     
-    /* Melhoria específica para os cards do time */
+    /* Cards do time - centralização perfeita + visual premium */
     .stContainer {
         background: #1e2937 !important;
         border: 2px solid #475569 !important;
-        border-radius: 18px !important;
-        padding: 16px 12px !important;
+        border-radius: 20px !important;
+        padding: 18px 14px 14px 14px !important;
         text-align: center !important;
-        box-shadow: 0 10px 15px -3px rgb(0 0 0 / 0.3);
-        transition: all 0.3s ease;
+        box-shadow: 0 10px 15px -3px rgb(0 0 0 / 0.35);
+        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        display: flex !important;
+        flex-direction: column !important;
+        align-items: center !important;
+        justify-content: space-between !important;
+        min-height: 320px;
     }
     
     .stContainer:hover {
         border-color: #f97316 !important;
-        box-shadow: 0 20px 25px -5px rgb(0 0 0 / 0.3);
-        transform: translateY(-4px);
+        box-shadow: 0 25px 50px -12px rgb(249 115 22 / 0.25);
+        transform: translateY(-6px);
     }
     
     .stContainer img {
-        border-radius: 12px;
-        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
-        margin: 0 auto;
-        display: block;
+        width: 110px !important;
+        height: 110px !important;
+        object-fit: contain;
+        border-radius: 16px;
+        box-shadow: 0 8px 16px rgba(0, 0, 0, 0.5);
+        margin-bottom: 8px;
+    }
+    
+    .stContainer h4 {
+        margin: 4px 0 6px 0 !important;
+        font-size: 1.15rem !important;
+        font-weight: 800 !important;
     }
 </style>
 """, unsafe_allow_html=True)
@@ -516,7 +529,20 @@ with tab1:  # Tudo dentro deste bloco aparece na aba "Modo Manual"
                         st.markdown(f"<div style='text-align:center; margin-bottom:6px;'>{tipos_html}</div>", unsafe_allow_html=True)
                         
                         # Geração + ID
-                        st.markdown(f"<div style='text-align:center; color:#94a3b8; font-size:0.8rem; margin-bottom:12px;'>Gen {getattr(pkm, 'generation', '?')} • #{pkm.id:04d}</div>", unsafe_allow_html=True)
+                        st.markdown(f"<div style='text-align:center; color:#94a3b8; font-size:0.8rem; margin-bottom:8px;'>Gen {getattr(pkm, 'generation', '?')} • #{pkm.id:04d}</div>", unsafe_allow_html=True)
+                        
+                        # Stats (Attack / Defense / Speed) - mais bonito e útil
+                        if hasattr(pkm, 'base_stats') and pkm.base_stats:
+                            atk = pkm.base_stats.get('attack', 0)
+                            defense = pkm.base_stats.get('defense', 0)
+                            speed = pkm.base_stats.get('speed', 0)
+                            st.markdown(f"""
+                            <div style="display: flex; justify-content: center; gap: 12px; margin-bottom: 12px; font-size: 0.75rem;">
+                                <div><span style="color:#f97316;">⚔️</span> {atk}</div>
+                                <div><span style="color:#3b82f6;">🛡️</span> {defense}</div>
+                                <div><span style="color:#22c55e;">⚡</span> {speed}</div>
+                            </div>
+                            """, unsafe_allow_html=True)
                         
                         # Botão Remover
                         if st.button("🗑️ Remover", key=f"remove_{idx}", use_container_width=True):
