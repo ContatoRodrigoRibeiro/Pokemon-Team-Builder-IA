@@ -165,12 +165,13 @@ st.markdown("""
     }
     
     .stContainer img {
-        width: 110px !important;
-        height: 110px !important;
+        width: 118px !important;
+        height: 118px !important;
         object-fit: contain;
         border-radius: 16px;
         box-shadow: 0 8px 16px rgba(0, 0, 0, 0.5);
-        margin-bottom: 8px;
+        margin: 0 auto 10px auto !important;   /* FORÇA centralização total - resolve margin-left */
+        display: block !important;
     }
     
     .stContainer h4 {
