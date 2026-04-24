@@ -288,40 +288,89 @@ def render_pokemon_card(pkm, show_remove=True, key_prefix="", expansion="SV", te
         "Dark": "#705746", "Steel": "#B7B7CE", "Fairy": "#D685AD"
     }
 
+    stats = getattr(pkm, 'base_stats', {})
+    hp = stats.get('hp', 80)
+    atk = stats.get('attack', 80)
+    defense = stats.get('defense', 80)
+    spa = stats.get('special-attack', 80)
+    spd = stats.get('special-defense', 80)
+    spe = stats.get('speed', 80)
+    bst = hp + atk + defense + spa + spd + spe
+
     main_color = type_colors.get(pkm.types[0].value, "#64748b") if pkm.types else "#64748b"
-    hp = getattr(pkm, 'base_stats', {}).get('hp', 80)
 
     with st.container():
-        # Card com borda colorida
+        # Container do card com borda colorida
         st.markdown(f"""
-        <div style="background:#1e2937; border:3px solid {main_color}; border-radius:18px; margin:10px 0; box-shadow:0 10px 25px rgba(0,0,0,0.5); overflow:hidden;">
+        <div style="
+            background: #1e2937;
+            border: 3px solid {main_color};
+            border-radius: 18px;
+            padding: 0;
+            margin: 10px 0;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.5);
+            overflow: hidden;
+        ">
         """, unsafe_allow_html=True)
 
-        # Header
+        # Header colorido
         st.markdown(f"""
-        <div style="background:linear-gradient(90deg, {main_color}, #1e2937); padding:8px 14px; display:flex; justify-content:space-between; align-items:center; color:white;">
+        <div style="
+            background: linear-gradient(135deg, {main_color}, #1e2937);
+            padding: 8px 14px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            color: white;
+        ">
             <span style="font-weight:700; font-size:12px;">BASIC</span>
-            <span style="background:#1e2937; padding:3px 10px; border-radius:6px; font-size:11px; font-weight:700;">HP {hp}</span>
+            <span style="background:#1e2937; padding:2px 9px; border-radius:6px; font-size:11px; font-weight:700;">HP {hp}</span>
         </div>
         """, unsafe_allow_html=True)
 
-        # Imagem Centralizada + Nome + Tipo
-        col1, col2, col3 = st.columns([0.5, 2, 0.5])
-        with col2:
-            sprite_url = pkm.sprite or f"https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/official-artwork/{pkm.id}.png"
-            st.image(sprite_url, width=100)
+        # Imagem + Nome + Tipos
+        col_img, col_info = st.columns([1, 2.2])
 
-            st.markdown(f"<div style='text-align:center; font-size:19px; font-weight:800; color:#f1f5f9; margin:6px 0;'>{pkm.name}</div>", unsafe_allow_html=True)
+        with col_img:
+            sprite_url = pkm.sprite or f"https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/official-artwork/{pkm.id}.png"
+            st.image(sprite_url, width=95)
+
+        with col_info:
+            st.markdown(f"**{pkm.name}**", unsafe_allow_html=True)
 
             # Tipos
             if pkm.types:
-                tipos_html = " ".join([f'<span style="background:{type_colors.get(t.value, "#64748b")}; color:white; padding:3px 10px; border-radius:9999px; font-size:10px; margin:0 3px;">{t.value}</span>' for t in pkm.types])
-                st.markdown(f"<div style='text-align:center; margin-bottom:6px;'>{tipos_html}</div>", unsafe_allow_html=True)
+                tipos = " ".join([
+                                     f'<span style="background:{type_colors.get(t.value, "#64748b")}; color:white; padding:2px 8px; border-radius:9999px; font-size:10px; margin-right:4px;">{t.value}</span>'
+                                     for t in pkm.types])
+                st.markdown(tipos, unsafe_allow_html=True)
 
-            st.markdown(f"<div style='text-align:center; color:#94a3b8; font-size:11px;'>Gen {getattr(pkm, 'generation', '?')} • #{str(getattr(pkm, 'id', '000')).zfill(3)}</div>", unsafe_allow_html=True)
+            st.caption(f"Gen {getattr(pkm, 'generation', '?')} • #{str(getattr(pkm, 'id', '000')).zfill(3)}")
 
-        # Fecha o card
-        st.markdown("</div>", unsafe_allow_html=True)
+        # Stats
+        st.markdown(f"""
+        <div style="background:#0f172a; padding:10px 14px; font-size:11px;">
+            <div style="display:grid; grid-template-columns: repeat(6, 1fr); gap:6px; text-align:center;">
+                <div><span style="color:#94a3b8; font-size:9px;">ATK</span><br><strong>{atk}</strong></div>
+                <div><span style="color:#94a3b8; font-size:9px;">DEF</span><br><strong>{defense}</strong></div>
+                <div><span style="color:#94a3b8; font-size:9px;">SPA</span><br><strong>{spa}</strong></div>
+                <div><span style="color:#94a3b8; font-size:9px;">SPD</span><br><strong>{spd}</strong></div>
+                <div><span style="color:#94a3b8; font-size:9px;">SPE</span><br><strong>{spe}</strong></div>
+                <div style="background:#ef4444; color:white; border-radius:5px; padding:1px 4px;">
+                    <span style="font-size:9px;">BST</span><br><strong>{bst}</strong>
+                </div>
+            </div>
+        </div>
+        """, unsafe_allow_html=True)
+
+        # Footer
+        st.markdown(f"""
+        <div style="background:#1e2937; padding:6px 14px; display:flex; justify-content:space-between; font-size:10px; color:#64748b;">
+            <span>{expansion}</span>
+            <span>Gen {getattr(pkm, 'generation', '?')}</span>
+        </div>
+        </div>
+        """, unsafe_allow_html=True)
 
         # Botão Remover
         if show_remove and team_index is not None:
