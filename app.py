@@ -288,7 +288,6 @@ def render_pokemon_card(pkm, show_remove=True, key_prefix="", expansion="SV", te
         "Dark": "#705746", "Steel": "#B7B7CE", "Fairy": "#D685AD"
     }
 
-    # Pega stats (se não existir, usa valores padrão)
     stats = getattr(pkm, 'base_stats', {})
     hp = stats.get('hp', 80)
     atk = stats.get('attack', 80)
@@ -298,75 +297,78 @@ def render_pokemon_card(pkm, show_remove=True, key_prefix="", expansion="SV", te
     spe = stats.get('speed', 80)
     bst = hp + atk + defense + spa + spd + spe
 
-    # Cor principal do card (baseada no primeiro tipo)
     main_color = type_colors.get(pkm.types[0].value, "#64748b") if pkm.types else "#64748b"
 
     with st.container():
-        # Card principal
+        # Container do card com borda colorida
         st.markdown(f"""
         <div style="
             background: #1e2937;
             border: 3px solid {main_color};
-            border-radius: 20px;
+            border-radius: 18px;
             padding: 0;
-            margin: 12px 0;
-            box-shadow: 0 12px 30px rgba(0,0,0,0.5);
+            margin: 10px 0;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.5);
             overflow: hidden;
         ">
-            <!-- Header colorido -->
-            <div style="
-                background: linear-gradient(135deg, {main_color}, #1e2937);
-                padding: 8px 16px;
-                display: flex;
-                justify-content: space-between;
-                align-items: center;
-                color: white;
-            ">
-                <span style="font-weight:700; font-size:13px;">BASIC</span>
-                <span style="background:#1e2937; padding:2px 10px; border-radius:8px; font-size:12px; font-weight:700;">HP {hp}</span>
-            </div>
-
-            <!-- Imagem -->
-            <div style="background:#0f172a; padding:20px; text-align:center;">
-                <img src="{pkm.sprite or f'https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/official-artwork/{pkm.id}.png'}" 
-                     width="120" style="filter: drop-shadow(0 10px 20px rgba(0,0,0,0.6));">
-            </div>
-
-            <!-- Nome e Tipos -->
-            <div style="padding: 12px 16px; background:#1e2937; text-align:center;">
-                <div style="font-size:20px; font-weight:800; color:#f1f5f9; margin-bottom:6px;">{pkm.name}</div>
-                <div style="display:flex; justify-content:center; gap:6px; flex-wrap:wrap;">
         """, unsafe_allow_html=True)
 
-        # Tipos
-        if pkm.types:
-            for t in pkm.types:
-                color = type_colors.get(t.value, "#64748b")
-                st.markdown(f'<span style="background:{color}; color:white; padding:3px 12px; border-radius:9999px; font-size:11px; font-weight:700;">{t.value}</span>', unsafe_allow_html=True)
-
+        # Header colorido
         st.markdown(f"""
+        <div style="
+            background: linear-gradient(135deg, {main_color}, #1e2937);
+            padding: 8px 14px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            color: white;
+        ">
+            <span style="font-weight:700; font-size:12px;">BASIC</span>
+            <span style="background:#1e2937; padding:2px 9px; border-radius:6px; font-size:11px; font-weight:700;">HP {hp}</span>
+        </div>
+        """, unsafe_allow_html=True)
+
+        # Imagem + Nome + Tipos
+        col_img, col_info = st.columns([1, 2.2])
+
+        with col_img:
+            sprite_url = pkm.sprite or f"https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/official-artwork/{pkm.id}.png"
+            st.image(sprite_url, width=95)
+
+        with col_info:
+            st.markdown(f"**{pkm.name}**", unsafe_allow_html=True)
+
+            # Tipos
+            if pkm.types:
+                tipos = " ".join([
+                                     f'<span style="background:{type_colors.get(t.value, "#64748b")}; color:white; padding:2px 8px; border-radius:9999px; font-size:10px; margin-right:4px;">{t.value}</span>'
+                                     for t in pkm.types])
+                st.markdown(tipos, unsafe_allow_html=True)
+
+            st.caption(f"Gen {getattr(pkm, 'generation', '?')} • #{str(getattr(pkm, 'id', '000')).zfill(3)}")
+
+        # Stats
+        st.markdown(f"""
+        <div style="background:#0f172a; padding:10px 14px; font-size:11px;">
+            <div style="display:grid; grid-template-columns: repeat(6, 1fr); gap:6px; text-align:center;">
+                <div><span style="color:#94a3b8; font-size:9px;">ATK</span><br><strong>{atk}</strong></div>
+                <div><span style="color:#94a3b8; font-size:9px;">DEF</span><br><strong>{defense}</strong></div>
+                <div><span style="color:#94a3b8; font-size:9px;">SPA</span><br><strong>{spa}</strong></div>
+                <div><span style="color:#94a3b8; font-size:9px;">SPD</span><br><strong>{spd}</strong></div>
+                <div><span style="color:#94a3b8; font-size:9px;">SPE</span><br><strong>{spe}</strong></div>
+                <div style="background:#ef4444; color:white; border-radius:5px; padding:1px 4px;">
+                    <span style="font-size:9px;">BST</span><br><strong>{bst}</strong>
                 </div>
             </div>
+        </div>
+        """, unsafe_allow_html=True)
 
-            <!-- Stats -->
-            <div style="background:#0f172a; padding:12px 16px; font-size:12px;">
-                <div style="display:grid; grid-template-columns: repeat(3, 1fr); gap:8px; text-align:center;">
-                    <div><span style="color:#94a3b8;">ATK</span><br><strong>{atk}</strong></div>
-                    <div><span style="color:#94a3b8;">DEF</span><br><strong>{defense}</strong></div>
-                    <div><span style="color:#94a3b8;">SPA</span><br><strong>{spa}</strong></div>
-                    <div><span style="color:#94a3b8;">SPD</span><br><strong>{spd}</strong></div>
-                    <div><span style="color:#94a3b8;">SPE</span><br><strong>{spe}</strong></div>
-                    <div style="background:#ef4444; color:white; border-radius:6px; padding:2px;">
-                        <span style="font-size:10px;">BST</span><br><strong>{bst}</strong>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Footer -->
-            <div style="background:#1e2937; padding:8px 16px; display:flex; justify-content:space-between; align-items:center; font-size:11px; color:#64748b;">
-                <span>Gen {getattr(pkm, 'generation', '?')}</span>
-                <span>#{str(getattr(pkm, 'id', '000')).zfill(3)}</span>
-            </div>
+        # Footer
+        st.markdown(f"""
+        <div style="background:#1e2937; padding:6px 14px; display:flex; justify-content:space-between; font-size:10px; color:#64748b;">
+            <span>{expansion}</span>
+            <span>Gen {getattr(pkm, 'generation', '?')}</span>
+        </div>
         </div>
         """, unsafe_allow_html=True)
 
