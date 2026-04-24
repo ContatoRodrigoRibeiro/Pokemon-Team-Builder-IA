@@ -556,7 +556,7 @@ with tab1:  # Tudo dentro deste bloco aparece na aba "Modo Manual"
                         # IMAGEM (SPRITE) DO POKÉMON
                         # width=105 → tamanho da imagem
                         if pkm.sprite:
-                            st.image(pkm.sprite, width=105)
+                            st.image(pkm.sprite, width=500)
                         
                         # NOME DO POKÉMON (centralizado e em negrito)
                         st.markdown(f"<div style='text-align:center; font-size:1.15rem; font-weight:800; color:white; margin:6px 0 4px 0;'>{pkm.name}</div>", unsafe_allow_html=True)
