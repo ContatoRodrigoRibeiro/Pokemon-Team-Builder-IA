@@ -531,18 +531,17 @@ with tab1:  # Tudo dentro deste bloco aparece na aba "Modo Manual"
                         # Geração + ID
                         st.markdown(f"<div style='text-align:center; color:#94a3b8; font-size:0.8rem; margin-bottom:8px;'>Gen {getattr(pkm, 'generation', '?')} • #{pkm.id:04d}</div>", unsafe_allow_html=True)
                         
-                        # Stats (Attack / Defense / Speed) - mais bonito e útil
-                        if hasattr(pkm, 'base_stats') and pkm.base_stats:
-                            atk = pkm.base_stats.get('attack', 0)
-                            defense = pkm.base_stats.get('defense', 0)
-                            speed = pkm.base_stats.get('speed', 0)
-                            st.markdown(f"""
-                            <div style="display: flex; justify-content: center; gap: 12px; margin-bottom: 12px; font-size: 0.75rem;">
-                                <div><span style="color:#f97316;">⚔️</span> {atk}</div>
-                                <div><span style="color:#3b82f6;">🛡️</span> {defense}</div>
-                                <div><span style="color:#22c55e;">⚡</span> {speed}</div>
-                            </div>
-                            """, unsafe_allow_html=True)
+                        # Stats (Attack / Defense / Speed) - sempre mostra para todos os Pokémon
+                        atk = pkm.base_stats.get('attack', 0) if hasattr(pkm, 'base_stats') else 0
+                        defense = pkm.base_stats.get('defense', 0) if hasattr(pkm, 'base_stats') else 0
+                        speed = pkm.base_stats.get('speed', 0) if hasattr(pkm, 'base_stats') else 0
+                        st.markdown(f"""
+                        <div style="display: flex; justify-content: center; gap: 16px; margin: 6px 0 12px 0; font-size: 0.8rem; font-weight: 600;">
+                            <div style="color:#f97316;">⚔️ {atk}</div>
+                            <div style="color:#3b82f6;">🛡️ {defense}</div>
+                            <div style="color:#22c55e;">⚡ {speed}</div>
+                        </div>
+                        """, unsafe_allow_html=True)
                         
                         # Botão Remover
                         if st.button("🗑️ Remover", key=f"remove_{idx}", use_container_width=True):
