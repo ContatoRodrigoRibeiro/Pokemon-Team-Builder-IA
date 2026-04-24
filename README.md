@@ -1,87 +1,105 @@
-# 🐾 Pokémon Team Builder IA
+# 🤖 Pokémon Team Builder IA
 
-**Monte times imbatíveis com o poder da Inteligência Artificial!** ⚔️🔥
+**Monte times imbatíveis com IA • Gen 9 + anteriores**
 
-Uma ferramenta inteligente que usa IA para criar, analisar e otimizar times competitivos de Pokémon em segundos. Perfeita para VGC, Smogon (OU, UU, RU...), Singles, Doubles e mais!
+[![Streamlit App](https://static.streamlit.io/badges/streamlit_badge_black_white.svg)](https://iageradoradetimepokemon.streamlit.app/)
 
-
-[![Version](https://img.shields.io/badge/version-1.0-blue)](https://github.com/ContatoRodrigoRibeiro/pokemon-team-builder-ia/releases)
-[![Stars](https://img.shields.io/github/stars/ContatoRodrigoRibeiro/pokemon-team-builder-ia)](https://github.com/ContatoRodrigoRibeiro/pokemon-team-builder-ia/stargazers)
-[![Made with Love](https://img.shields.io/badge/made%20with-%E2%9D%A4%EF%B8%8F-red)](https://github.com/ContatoRodrigoRibeiro)
+**🎮 App Online (já rodando):**  
+[https://iageradoradetimepokemon.streamlit.app/](https://iageradoradetimepokemon.streamlit.app/)
 
 ---
 
-## ✨ Funcionalidades
+Uma aplicação web completa e moderna para construir times de Pokémon (Gen 1 a Gen 9) de forma **manual ou assistida por IA**. Feita **100% em um único arquivo** (`app.py`).
 
-- 🤖 **Geração de Times com IA** — Descreva seu estilo ou meta e a IA monta times completos e otimizados instantaneamente
-- 🔬 **Análise Avançada** — Cobertura de tipos, sinergias, fraquezas e sugestões de melhoria automática
-- 🧠 **Recomendações Inteligentes** — Movesets, EVs, nature, itens e abilities baseados no meta atual
-- ⚔️ **Simulador de Batalhas** — Teste seu time contra oponentes do meta ou times rivais #Em breve
-- 📤 **Exportação Rápida** — Para Pokémon Showdown, PokePaste e formatos competitivos 
-- 📊 **Suporte a Múltiplas Gerações** — Scarlet/Violet + gerações anteriores (personalizável) 
-- 🌟 **Modo Manual + IA Híbrido** — Monte do zero ou deixe a IA refinar seu time  #Em breve
+---
 
-## 📸 Demonstração
+## ✨ Funcionalidades Completas
 
-![Tela de geração de time](./1.png)
+| Módulo                              | Status     | O que faz |
+|-------------------------------------|------------|-----------|
+| **🛠️ Modo Manual**                 | ✅ Completo | Busca Pokémon pela PokeAPI e monta time manualmente |
+| **🔬 Análise Avançada**             | ✅ Completo | Fraquezas defensivas, cobertura ofensiva e pontuação de sinergia |
+| **🧠 Recomendações Inteligentes**   | ✅ Completo | Sugestões automáticas baseadas nas fraquezas do seu time |
+| **🤖 Gerar com IA**                 | ✅ Completo | Gera time completo por prompt (ex: "time de água geração 9") |
+| **🌟 Modo IA Híbrido + Simulador**  | ✅ Completo | Geração híbrida + simulador de batalha contra time rival |
+| **📤 Exportação**                   | ✅ Completo | Exporta direto para Pokémon Showdown e PokePaste |
 
-## 🛠️ Tecnologias Utilizadas
+**Destaques técnicos:**
+- Análise completa de tipos (tabela de efetividade Gen 6+)
+- Suporte total a dual-types
+- Cache de Pokémon para melhor performance
+- Interface totalmente em português
+- Design moderno e responsivo (Streamlit)
 
-| Camada       | Tecnologia                          |
-|--------------|-------------------------------------|
-| Frontend     | Next.js + React + TailwindCSS       |
-| Backend      | [Node.js / Python Flask / FastAPI] |
-| Dados Pokémon| PokeAPI + Smogon + dados do meta    |
-| Hospedagem   | Vercel / Railway / Render           |
+---
 
-*(Substitua pelos tecnologias reais do seu projeto)*
+## 🚀 Como Usar
 
-## 🚀 Como Executar (Desenvolvimento)
+### ✅ Versão Online (Recomendada)
+Acesse diretamente:  
+**[https://iageradoradetimepokemon.streamlit.app/](https://iageradoradetimepokemon.streamlit.app/)**
 
-```bash
-# Clone o repositório
-git clone https://github.com/ContatoRodrigoRibeiro/pokemon-team-builder-ia.git
-
-# Entre na pasta
-cd pokemon-team-builder-ia
-
-# Instale as dependências
-npm install
-# ou
-pip install -r requirements.txt   # se for Python
-
-# Rode o projeto
-npm run dev
-# ou
-python app.py
+### 🖥️ Rodar Localmente
 
 
-Acesse em http://localhost:3000 (ou a porta configurada).
-📖 Como Usar
+# 1. Clone o repositório
+git clone https://github.com/ContatoRodrigoRibeiro/Pokemon-Team-Builder-IA.git
+cd Pokemon-Team-Builder-IA
 
-Escolha o formato (VGC, OU, etc.)
-Digite sua ideia (“time ofensivo com Incineroar + Miraidon” ou “time rain com Pelipper”)
-Clique em Gerar com IA
-Ajuste, teste e exporte!
+# 2. Instale as dependências
+pip install -r requirements.txt
 
-🗺️ Roadmap
-
- Integração com Pokémon Showdown (import/export direto)
- Modo “Counter Team” (IA monta time que counters o seu)
- Histórico de times salvos na conta
- Suporte a Legends: Z-A
- App mobile (PWA)
-
-🤝 Como Contribuir
-Contribuições são super bem-vindas! Veja o arquivo CONTRIBUTING.md para detalhes.
-
-Faça um fork
-Crie uma branch (git checkout -b feature/nova-ia)
-Commit suas mudanças (git commit -m 'feat: nova funcionalidade')
-Push (git push origin feature/nova-ia)
-Abra um Pull Request
+# 3. Rode a aplicação
+streamlit run app.py
+A aplicação abrirá automaticamente no navegador em http://localhost:8501
 
 
+🛠️ Tecnologias Utilizadas
 
-Feito com ❤️ por Rodrigo Ribeiro e a comunidade Pokémon.
-Quer ajudar a tornar esse o melhor Team Builder IA do Brasil? ⭐ Dê uma estrela no repositório e compartilhe com seus amigos treinadores!
+Streamlit – Interface web interativa
+Pandas – Leitura do CSV da Pokédex
+PokeAPI – Busca de sprites e dados em tempo real
+Python 3.10+
+Single-file architecture (tudo em um único arquivo app.py)
+
+
+📁 Estrutura do Projeto
+textPokemon-Team-Builder-IA/
+├── app.py                    # ← Arquivo principal (tudo em um único arquivo)
+├── data/
+│   └── pokemon_cleaned_pt.csv # Pokédex em português
+├── requirements.txt
+├── README.md
+└── preview.png               # Imagem de demonstração
+
+📸 Demonstração
+
+Modo Manual com busca em tempo real
+Análise Avançada com cores de gravidade
+Geração com IA (filtro por geração e tipo)
+Simulador de batalhas com pontuação de sinergia
+Exportação para Showdown e PokePaste
+
+(Imagens de demonstração serão atualizadas em breve no repositório)
+
+📌 Próximas Melhorias (Opcionais)
+
+Integração com modelo de IA real (Groq / OpenAI) para prompts mais inteligentes
+Salvamento de times (JSON / localStorage)
+Modo competitivo com EVs, IVs e nature
+Tema dark/light automático
+Suporte a movesets e abilities na análise
+
+
+👨‍💻 Autor
+Rodrigo Ribeiro
+Desenvolvido com ❤️ para a comunidade Pokémon brasileira
+
+Projeto finalizado e estável ✅
+Versão atual: 1.0.0 (todos os módulos "Em breve" foram implementados)
+
+Quer contribuir?
+Fork → Faça suas melhorias → Pull Request
+Qualquer dúvida ou sugestão, é só abrir uma Issue!
+
+Feito com Streamlit • Pokémon © Nintendo, Game Freak, Creatures
