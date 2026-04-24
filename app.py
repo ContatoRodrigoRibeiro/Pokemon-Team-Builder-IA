@@ -1,3 +1,21 @@
+# ============================================================
+# POKÉMON TEAM BUILDER IA - CÓDIGO COMPLETO COMENTADO
+# ============================================================
+# Este arquivo é 100% comentado para você entender TUDO e poder
+# melhorar o visual por conta própria.
+#
+# ESTRUTURA GERAL:
+# 1. Imports e Classes (Type, Pokemon, Team)
+# 2. Configuração da página + CSS (aparência visual)
+# 3. Hero Header (título bonito no topo)
+# 4. Sidebar (dicas e atalhos)
+# 5. 5 Abas (Manual, Análise, Recomendações, Gerar IA, Híbrido)
+# 6. Seção de Exportação
+#
+# O PROBLEMA DE CENTRALIZAÇÃO DOS CARDS ESTÁ NA SEÇÃO "SEU TIME ATUAL"
+# (linhas ~498 em diante). Leia os comentários ali com atenção.
+# ============================================================
+
 import sys  # Importa o módulo sys, que permite manipular o caminho de busca de módulos do Python
 from pathlib import \
     Path  # Importa a classe Path do módulo pathlib, que ajuda a trabalhar com caminhos de arquivos de forma moderna e segura
@@ -495,54 +513,68 @@ with tab1:  # Tudo dentro deste bloco aparece na aba "Modo Manual"
                         st.error("❌ Time completo! (máximo 6)")  # Erro
                 except Exception as e:  # Qualquer erro
                     st.error(f"Erro: {e}")  # Mostra erro
-    with col_time:  # Coluna do time atual
-        st.subheader("Seu Time Atual")  # Subtítulo
+    # =====================================================
+    # SEÇÃO: "SEU TIME ATUAL" - CARDS DOS POKÉMON
+    # =====================================================
+    # Esta é a parte MAIS IMPORTANTE do visual. 
+    # Aqui criamos os cards bonitos para cada Pokémon no time.
+    # O problema de desalinhamento vem daqui + CSS do Streamlit.
+    with col_time:  # Coluna da direita (onde fica o time atual)
+        st.subheader("Seu Time Atual")  # Título da seção
         
-        team = st.session_state.current_team
+        team = st.session_state.current_team  # Pega o time atual da memória
         
-        # Botão limpar time
+        # Botão para limpar todo o time de uma vez
         if team.pokemon:
             if st.button("🗑️ LIMPAR TIME COMPLETO", type="secondary", use_container_width=True, key="clear_team_btn"):
-                st.session_state.current_team = Team()
+                st.session_state.current_team = Team()  # Cria time vazio
                 st.success("✅ Time limpo com sucesso!")
-                st.rerun()
+                st.rerun()  # Recarrega a página
         
         if team.pokemon:
-            # Grid de 3 colunas
-            cols_grid = st.columns(3)
+            # Cria grid com 3 colunas (fica 2 linhas com 3 cards cada quando tem 6 Pokémon)
+            cols_grid = st.columns(3)  # Divide a área em 3 colunas iguais
             
+            # Loop para criar um card para cada Pokémon
             for idx, pkm in enumerate(team.pokemon):
-                col = cols_grid[idx % 3]
+                col = cols_grid[idx % 3]  # Alterna entre as 3 colunas (0,1,2,0,1,2...)
                 
-                with col:
+                with col:  # Tudo que estiver aqui vai para a coluna atual
                     first_type = pkm.types[0].value if pkm.types else "Normal"
-                    type_color = TYPE_COLORS.get(first_type, "#64748b")
+                    type_color = TYPE_COLORS.get(first_type, "#64748b")  # Pega a cor do tipo principal
                     
-                    # Card bonito usando container + CSS global
-                    with st.container(border=True):
-                        # Barra de cor no topo
+                    # ============================================
+                    # CRIAÇÃO DO CARD INDIVIDUAL
+                    # ============================================
+                    with st.container(border=True):  # Cria um "caixa" com borda (o card)
+                        
+                        # Barra colorida no topo do card (cor do tipo)
                         st.markdown(f"""
                         <div style="height: 8px; background: linear-gradient(90deg, {type_color}, #f97316); margin: -12px -12px 12px -12px; border-radius: 14px 14px 0 0;"></div>
                         """, unsafe_allow_html=True)
                         
-                        # Sprite grande e centralizado
+                        # IMAGEM (SPRITE) DO POKÉMON
+                        # width=105 → tamanho da imagem
                         if pkm.sprite:
                             st.image(pkm.sprite, width=105)
                         
-                        # Nome centralizado
+                        # NOME DO POKÉMON (centralizado e em negrito)
                         st.markdown(f"<div style='text-align:center; font-size:1.15rem; font-weight:800; color:white; margin:6px 0 4px 0;'>{pkm.name}</div>", unsafe_allow_html=True)
                         
-                        # Tipos centralizados
+                        # TIPOS (ex: Grass + Poison) - badges coloridas
                         tipos_html = ' '.join(get_type_badge(t.value) for t in pkm.types) if pkm.types else '—'
                         st.markdown(f"<div style='text-align:center; margin-bottom:4px;'>{tipos_html}</div>", unsafe_allow_html=True)
                         
-                        # Geração + ID
+                        # GERAÇÃO + NÚMERO DA POKEDEX
                         st.markdown(f"<div style='text-align:center; color:#94a3b8; font-size:0.75rem; margin-bottom:6px;'>Gen {getattr(pkm, 'generation', '?')} • #{pkm.id:04d}</div>", unsafe_allow_html=True)
                         
-                        # Stats sempre centralizados
+                        # STATS (Attack / Defense / Speed)
+                        # Pega os valores ou usa 0 se não existir
                         atk = pkm.base_stats.get('attack', 0) if hasattr(pkm, 'base_stats') else 0
                         defense = pkm.base_stats.get('defense', 0) if hasattr(pkm, 'base_stats') else 0
                         speed = pkm.base_stats.get('speed', 0) if hasattr(pkm, 'base_stats') else 0
+                        
+                        # Mostra os 3 stats centralizados com ícones coloridos
                         st.markdown(f"""
                         <div style="display:flex; justify-content:center; gap:14px; margin:4px 0 10px 0; font-size:0.8rem; font-weight:700;">
                             <span style="color:#f97316;">⚔️ {atk}</span>
@@ -551,10 +583,10 @@ with tab1:  # Tudo dentro deste bloco aparece na aba "Modo Manual"
                         </div>
                         """, unsafe_allow_html=True)
                         
-                        # Botão Remover
+                        # BOTÃO DE REMOVER (laranja, ocupa toda a largura do card)
                         if st.button("🗑️ Remover", key=f"remove_{idx}", use_container_width=True):
-                            team.remove_pokemon(idx)
-                            st.rerun()
+                            team.remove_pokemon(idx)  # Remove o Pokémon do time
+                            st.rerun()  # Recarrega para atualizar a tela
         else:
             st.info("Seu time está vazio. Busque e adicione Pokémon acima!")
 
