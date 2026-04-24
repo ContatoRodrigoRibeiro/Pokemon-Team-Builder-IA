@@ -43,7 +43,7 @@ class Team:
 
 
 # ==================== CONFIGURAÇÃO INICIAL ====================
-st.set_page_config(page_title="Pokémon Team Builder IA", page_icon="⚔️", layout="wide")
+st.set_page_config(page_title="Gerador de times Pokemons", page_icon="⚔️", layout="wide")
 
 # ==================== NOVO TEMA ELEGANTE (atualizado) ====================
 st.markdown("""
@@ -152,8 +152,8 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
-st.title("Pokémon Team Builder IA")
-st.caption("Monte times imbatíveis com IA • Design elegante")
+st.title("PokeIA para Times")
+st.caption("Monte times imbatíveis com IA - desenvolvido por mim <3")
 
 if "current_team" not in st.session_state:
     st.session_state.current_team = Team()
