@@ -388,12 +388,19 @@ if "full_pokedex" not in st.session_state:  # Verifica se o pokedex completo ain
                 if col in row and pd.notna(row[col]):  # Se a coluna existe e não é nula
                     abilities.extend([a.strip().title() for a in str(row[col]).split(",") if
                                       a.strip()])  # Adiciona as habilidades separadas por vírgula
+            # Carrega stats do CSV (para todos os Pokémon terem atributos)
+            base_stats = {}
+            for stat_col, stat_key in [("hp", "hp"), ("attack", "attack"), ("defense", "defense"), 
+                                       ("sp_atk", "special-attack"), ("sp_def", "special-defense"), ("speed", "speed")]:
+                if stat_col in row and pd.notna(row[stat_col]):
+                    base_stats[stat_key] = int(row[stat_col])
+            
             pkm = Pokemon(  # Cria o objeto Pokemon
                 id=pkm_id,
                 name=nome.replace("-", " ").title(),
                 types=types,
                 abilities=list(dict.fromkeys(abilities)),  # Remove duplicatas mantendo ordem
-                base_stats={},
+                base_stats=base_stats,
                 sprite=sprite
             )
             pkm.generation = gen  # Define a geração
@@ -512,34 +519,34 @@ with tab1:  # Tudo dentro deste bloco aparece na aba "Modo Manual"
                     
                     # Card bonito usando container + CSS global
                     with st.container(border=True):
-                        # Barra de cor no topo (usando markdown pequeno)
+                        # Barra de cor no topo
                         st.markdown(f"""
                         <div style="height: 8px; background: linear-gradient(90deg, {type_color}, #f97316); margin: -12px -12px 12px -12px; border-radius: 14px 14px 0 0;"></div>
                         """, unsafe_allow_html=True)
                         
-                        # Sprite centralizado
+                        # Sprite grande e centralizado
                         if pkm.sprite:
-                            st.image(pkm.sprite, width=100)
+                            st.image(pkm.sprite, width=105)
                         
-                        # Nome
-                        st.markdown(f"<h4 style='text-align:center; margin:8px 0 4px 0; color:white;'>{pkm.name}</h4>", unsafe_allow_html=True)
+                        # Nome centralizado
+                        st.markdown(f"<div style='text-align:center; font-size:1.15rem; font-weight:800; color:white; margin:6px 0 4px 0;'>{pkm.name}</div>", unsafe_allow_html=True)
                         
-                        # Tipos
+                        # Tipos centralizados
                         tipos_html = ' '.join(get_type_badge(t.value) for t in pkm.types) if pkm.types else '—'
-                        st.markdown(f"<div style='text-align:center; margin-bottom:6px;'>{tipos_html}</div>", unsafe_allow_html=True)
+                        st.markdown(f"<div style='text-align:center; margin-bottom:4px;'>{tipos_html}</div>", unsafe_allow_html=True)
                         
                         # Geração + ID
-                        st.markdown(f"<div style='text-align:center; color:#94a3b8; font-size:0.8rem; margin-bottom:8px;'>Gen {getattr(pkm, 'generation', '?')} • #{pkm.id:04d}</div>", unsafe_allow_html=True)
+                        st.markdown(f"<div style='text-align:center; color:#94a3b8; font-size:0.75rem; margin-bottom:6px;'>Gen {getattr(pkm, 'generation', '?')} • #{pkm.id:04d}</div>", unsafe_allow_html=True)
                         
-                        # Stats (Attack / Defense / Speed) - sempre mostra para todos os Pokémon
+                        # Stats sempre centralizados
                         atk = pkm.base_stats.get('attack', 0) if hasattr(pkm, 'base_stats') else 0
                         defense = pkm.base_stats.get('defense', 0) if hasattr(pkm, 'base_stats') else 0
                         speed = pkm.base_stats.get('speed', 0) if hasattr(pkm, 'base_stats') else 0
                         st.markdown(f"""
-                        <div style="display: flex; justify-content: center; gap: 16px; margin: 6px 0 12px 0; font-size: 0.8rem; font-weight: 600;">
-                            <div style="color:#f97316;">⚔️ {atk}</div>
-                            <div style="color:#3b82f6;">🛡️ {defense}</div>
-                            <div style="color:#22c55e;">⚡ {speed}</div>
+                        <div style="display:flex; justify-content:center; gap:14px; margin:4px 0 10px 0; font-size:0.8rem; font-weight:700;">
+                            <span style="color:#f97316;">⚔️ {atk}</span>
+                            <span style="color:#3b82f6;">🛡️ {defense}</span>
+                            <span style="color:#22c55e;">⚡ {speed}</span>
                         </div>
                         """, unsafe_allow_html=True)
                         
