@@ -45,110 +45,24 @@ class Team:
 # ==================== CONFIGURAÇÃO INICIAL ====================
 st.set_page_config(page_title="Gerador de times Pokemons", page_icon="⚔️", layout="wide")
 
-# ==================== NOVO TEMA ELEGANTE (atualizado) ====================
+# ==================== NOVO TEMA ELEGANTE ====================
 st.markdown("""
 <style>
     @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600&family=Poppins:wght@600&display=swap');
-
-    .stApp {
-        background: #0f172a;
-    }
-
-    h1, h2, h3 {
-        font-family: 'Poppins', sans-serif !important;
-        color: #f1f5f9 !important;
-        font-weight: 600;
-    }
-
-    .pokemon-card {
-        background: #1e2937;
-        border: 2px solid #475569;
-        border-radius: 20px;
-        margin: 10px 0;
-        box-shadow: 0 10px 25px rgba(0, 0, 0, 0.4);
-        transition: all 0.3s ease;
-        overflow: hidden;
-    }
-
-    .pokemon-card:hover {
-        transform: translateY(-8px);
-        box-shadow: 0 20px 40px rgba(239, 68, 68, 0.15);
-        border-color: #ef4444;
-    }
-
-    .card-header {
-        height: 48px;
-        background: linear-gradient(90deg, #1e2937, #334155);
-        display: flex;
-        align-items: center;
-        padding: 0 16px;
-        border-bottom: 1px solid #475569;
-    }
-
-    .type-badge {
-        padding: 4px 14px;
-        border-radius: 9999px;
-        font-size: 11px;
-        font-weight: 700;
-        color: white;
-        margin-right: 6px;
-        box-shadow: 0 2px 6px rgba(0,0,0,0.3);
-    }
-
-    .sprite-container {
-        background: #0f172a;
-        padding: 20px;
-        display: flex;
-        justify-content: center;
-        align-items: center;
-        min-height: 160px;
-    }
-
-    .sprite-container img {
-        filter: drop-shadow(0 15px 25px rgba(0,0,0,0.5));
-        transition: transform 0.4s ease;
-    }
-
-    .pokemon-card:hover .sprite-container img {
-        transform: scale(1.12);
-    }
-
-    .card-body {
-        padding: 16px 20px 20px;
-        text-align: center;
-        background: #1e2937;
-    }
-
-    .pokemon-name {
-        font-size: 20px;
-        font-weight: 700;
-        color: #f1f5f9;
-        margin-bottom: 6px;
-    }
-
-    .card-footer {
-        background: #0f172a;
-        padding: 10px 16px;
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        font-size: 12px;
-        color: #64748b;
-        border-top: 1px solid #475569;
-    }
-
-    .stButton button {
-        background: linear-gradient(#ef4444, #dc2626) !important;
-        color: white !important;
-        border: none !important;
-        font-weight: 600 !important;
-        border-radius: 12px !important;
-    }
-
-    .stButton button:hover {
-        background: linear-gradient(#dc2626, #b91c1c) !important;
-        transform: translateY(-2px);
-    }
+    .stApp { background: #0f172a; }
+    h1, h2, h3 { font-family: 'Poppins', sans-serif !important; color: #f1f5f9 !important; font-weight: 600; }
+    .pokemon-card { background: #1e2937; border: 2px solid #475569; border-radius: 20px; margin: 10px 0; box-shadow: 0 10px 25px rgba(0, 0, 0, 0.4); transition: all 0.3s ease; overflow: hidden; }
+    .pokemon-card:hover { transform: translateY(-8px); box-shadow: 0 20px 40px rgba(239, 68, 68, 0.15); border-color: #ef4444; }
+    .card-header { height: 48px; background: linear-gradient(90deg, #1e2937, #334155); display: flex; align-items: center; padding: 0 16px; border-bottom: 1px solid #475569; }
+    .type-badge { padding: 4px 14px; border-radius: 9999px; font-size: 11px; font-weight: 700; color: white; margin-right: 6px; box-shadow: 0 2px 6px rgba(0,0,0,0.3); }
+    .sprite-container { background: #0f172a; padding: 20px; display: flex; justify-content: center; align-items: center; min-height: 160px; }
+    .sprite-container img { filter: drop-shadow(0 15px 25px rgba(0,0,0,0.5)); transition: transform 0.4s ease; }
+    .pokemon-card:hover .sprite-container img { transform: scale(1.12); }
+    .card-body { padding: 16px 20px 20px; text-align: center; background: #1e2937; }
+    .pokemon-name { font-size: 20px; font-weight: 700; color: #f1f5f9; margin-bottom: 6px; }
+    .card-footer { background: #0f172a; padding: 10px 16px; display: flex; justify-content: space-between; align-items: center; font-size: 12px; color: #64748b; border-top: 1px solid #475569; }
+    .stButton button { background: linear-gradient(#ef4444, #dc2626) !important; color: white !important; border: none !important; font-weight: 600 !important; border-radius: 12px !important; }
+    .stButton button:hover { background: linear-gradient(#dc2626, #b91c1c) !important; transform: translateY(-2px); }
 </style>
 """, unsafe_allow_html=True)
 
@@ -277,7 +191,7 @@ def calculate_synergy_score(team: Team) -> int:
     return min(100, diversity + size_bonus + random_bonus)
 
 
-# ==================== FUNÇÃO DE CARD ELEGANTE ====================
+# ==================== FUNÇÃO DE CARD COM STATS COMPLETOS ====================
 def render_pokemon_card(pkm, show_remove=True, key_prefix="", expansion="SV", team_index=None):
     type_colors = {
         "Normal": "#A8A77A", "Fire": "#EE8130", "Water": "#6390F0",
@@ -300,29 +214,13 @@ def render_pokemon_card(pkm, show_remove=True, key_prefix="", expansion="SV", te
     main_color = type_colors.get(pkm.types[0].value, "#64748b") if pkm.types else "#64748b"
 
     with st.container():
-        # Container do card com borda colorida
         st.markdown(f"""
-        <div style="
-            background: #1e2937;
-            border: 3px solid {main_color};
-            border-radius: 18px;
-            padding: 0;
-            margin: 10px 0;
-            box-shadow: 0 10px 25px rgba(0,0,0,0.5);
-            overflow: hidden;
-        ">
+        <div style="background:#1e2937; border:3px solid {main_color}; border-radius:18px; padding:0; margin:10px 0; box-shadow:0 10px 25px rgba(0,0,0,0.5); overflow:hidden;">
         """, unsafe_allow_html=True)
 
-        # Header colorido
+        # Header
         st.markdown(f"""
-        <div style="
-            background: linear-gradient(135deg, {main_color}, #1e2937);
-            padding: 8px 14px;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            color: white;
-        ">
+        <div style="background:linear-gradient(135deg, {main_color}, #1e2937); padding:8px 14px; display:flex; justify-content:space-between; align-items:center; color:white;">
             <span style="font-weight:700; font-size:12px;">BASIC</span>
             <span style="background:#1e2937; padding:2px 9px; border-radius:6px; font-size:11px; font-weight:700;">HP {hp}</span>
         </div>
@@ -330,21 +228,17 @@ def render_pokemon_card(pkm, show_remove=True, key_prefix="", expansion="SV", te
 
         # Imagem + Nome + Tipos
         col_img, col_info = st.columns([1, 2.2])
-
         with col_img:
             sprite_url = pkm.sprite or f"https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/official-artwork/{pkm.id}.png"
             st.image(sprite_url, width=95)
 
         with col_info:
             st.markdown(f"**{pkm.name}**", unsafe_allow_html=True)
-
-            # Tipos
             if pkm.types:
                 tipos = " ".join([
                                      f'<span style="background:{type_colors.get(t.value, "#64748b")}; color:white; padding:2px 8px; border-radius:9999px; font-size:10px; margin-right:4px;">{t.value}</span>'
                                      for t in pkm.types])
                 st.markdown(tipos, unsafe_allow_html=True)
-
             st.caption(f"Gen {getattr(pkm, 'generation', '?')} • #{str(getattr(pkm, 'id', '000')).zfill(3)}")
 
         # Stats
@@ -372,11 +266,12 @@ def render_pokemon_card(pkm, show_remove=True, key_prefix="", expansion="SV", te
         </div>
         """, unsafe_allow_html=True)
 
-        # Botão Remover
         if show_remove and team_index is not None:
             if st.button("🗑️ Remover", key=f"remove_{key_prefix}_{team_index}", use_container_width=True):
                 st.session_state.current_team.remove_pokemon(team_index)
                 st.rerun()
+
+
 # ==================== CARREGAMENTO DO CSV ====================
 if "full_pokedex" not in st.session_state:
     try:
@@ -419,7 +314,7 @@ tab1, tab2, tab3, tab4, tab5 = st.tabs([
     "🤖 Gerar com IA", "🌟 Modo IA Híbrido + Simulador"
 ])
 
-# ====================== TAB 1 - MANUAL (COM CARDS NOVOS) ======================
+# ====================== TAB 1 - MANUAL (GRID 3 COLUNAS) ======================
 with tab1:
     st.header("Monte seu Time Manualmente")
     col_busca, col_time = st.columns([2, 3])
@@ -468,7 +363,6 @@ with tab1:
                     render_pokemon_card(pkm, show_remove=True, key_prefix="manual", team_index=i)
         else:
             st.info("Time vazio. Adicione Pokémon acima.")
-
 
 # ====================== TAB 2 - ANÁLISE AVANÇADA (COMPLETO) ======================
 with tab2:
