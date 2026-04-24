@@ -288,42 +288,56 @@ def render_pokemon_card(pkm, show_remove=True, key_prefix="", expansion="SV", te
         "Dark": "#705746", "Steel": "#B7B7CE", "Fairy": "#D685AD"
     }
 
-    types_html = ""
-    if hasattr(pkm, 'types') and pkm.types:
-        for t in pkm.types:
-            color = type_colors.get(t.value, "#64748b")
-            types_html += f'<span class="type-badge" style="background:{color}">{t.value}</span>'
+    # Cria o container do card
+    with st.container():
+        # Aplica CSS customizado no container
+        st.markdown(f"""
+        <style>
+            .card-{key_prefix}-{team_index} {{
+                background: #1e2937;
+                border: 2px solid #475569;
+                border-radius: 20px;
+                padding: 0;
+                margin: 10px 0;
+                box-shadow: 0 10px 25px rgba(0, 0, 0, 0.4);
+                overflow: hidden;
+            }}
+            .card-{key_prefix}-{team_index}:hover {{
+                border-color: #ef4444;
+                transform: translateY(-4px);
+            }}
+        </style>
+        """, unsafe_allow_html=True)
 
-    sprite_url = pkm.sprite or f"https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/official-artwork/{pkm.id}.png"
+        # Container principal
+        with st.container():
+            col1, col2 = st.columns([1, 3])
 
-    card_html = f"""
-    <div class="pokemon-card">
-        <div class="card-header">
-            <div style="display:flex; gap:8px;">{types_html}</div>
-            <div style="color:#94a3b8; font-size:11px; font-weight:600;">{expansion}</div>
-        </div>
+            with col1:
+                # Sprite
+                sprite_url = pkm.sprite or f"https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/official-artwork/{pkm.id}.png"
+                st.image(sprite_url, width=100)
 
-        <div class="sprite-container">
-            <img src="{sprite_url}" width="130">
-        </div>
+            with col2:
+                # Tipos
+                if pkm.types:
+                    tipos_html = ""
+                    for t in pkm.types:
+                        color = type_colors.get(t.value, "#64748b")
+                        tipos_html += f'<span style="background:{color}; color:white; padding:2px 10px; border-radius:9999px; font-size:11px; margin-right:4px;">{t.value}</span>'
+                    st.markdown(tipos_html, unsafe_allow_html=True)
 
-        <div class="card-body">
-            <div class="pokemon-name">{pkm.name}</div>
-            <div style="font-size:12px; color:#94a3b8;">Gen {getattr(pkm, 'generation', '?')}</div>
-        </div>
+                # Nome
+                st.markdown(f"**{pkm.name}**", unsafe_allow_html=True)
 
-        <div class="card-footer">
-            <span style="font-weight:700;">#{str(getattr(pkm, 'id', '000')).zfill(3)}</span>
-        </div>
-    </div>
-    """
-    st.markdown(card_html, unsafe_allow_html=True)
+                # Geração
+                st.caption(f"Gen {getattr(pkm, 'generation', '?')} • #{str(getattr(pkm, 'id', '000')).zfill(3)}")
 
-    if show_remove and team_index is not None:
-        if st.button("🗑️ Remover", key=f"remove_{key_prefix}_{team_index}", use_container_width=True):
-            st.session_state.current_team.remove_pokemon(team_index)
-            st.rerun()
-
+            # Botão Remover
+            if show_remove and team_index is not None:
+                if st.button("🗑️ Remover", key=f"remove_{key_prefix}_{team_index}", use_container_width=True):
+                    st.session_state.current_team.remove_pokemon(team_index)
+                    st.rerun()
 
 # ==================== CARREGAMENTO DO CSV ====================
 if "full_pokedex" not in st.session_state:
@@ -413,7 +427,7 @@ with tab1:
             cols = st.columns(3)
             for i, pkm in enumerate(team.pokemon):
                 with cols[i % 3]:
-                    render_pokemon_card(pkm, show_remove=True, key_prefix=f"manual_{i}", expansion="SV", team_index=i)
+                    render_pokemon_card(pkm, show_remove=True, key_prefix="manual", team_index=i)
         else:
             st.info("Time vazio. Adicione Pokémon acima.")
 
