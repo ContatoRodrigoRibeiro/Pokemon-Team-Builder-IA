@@ -467,8 +467,6 @@ with tab1:
         else:
             st.info("Time vazio. Adicione Pokémon acima.")
 
-    with cols[i % 3]:
-                render_pokemon_card(pkm, show_remove=True, key_prefix="manual", team_index=i)
 
 # ====================== TAB 2 - ANÁLISE AVANÇADA (COMPLETO) ======================
 with tab2:
