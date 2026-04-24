@@ -32,6 +32,8 @@ Uma aplicação web completa e moderna para construir times de Pokémon (Gen 1 a
 - Design moderno e responsivo (Streamlit)
 
 ---
+<img width="1868" height="884" alt="image" src="https://github.com/user-attachments/assets/8b8703a9-872e-4684-95b0-300f9279fc9b" />
+
 
 ## 🚀 Como Usar
 
