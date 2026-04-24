@@ -455,7 +455,7 @@ with tab1:  # Tudo dentro deste bloco aparece na aba "Modo Manual"
         
         team = st.session_state.current_team
         
-        # Botão limpar time (só aparece se tiver Pokémon)
+        # Botão limpar time
         if team.pokemon:
             if st.button("🗑️ LIMPAR TIME COMPLETO", type="secondary", use_container_width=True, key="clear_team_btn"):
                 st.session_state.current_team = Team()
@@ -463,64 +463,41 @@ with tab1:  # Tudo dentro deste bloco aparece na aba "Modo Manual"
                 st.rerun()
         
         if team.pokemon:
-            # Grid bonito de 3 colunas (2 linhas no máximo)
+            # Grid de 3 colunas
             cols_grid = st.columns(3)
             
             for idx, pkm in enumerate(team.pokemon):
                 col = cols_grid[idx % 3]
                 
                 with col:
-                    # Card moderno e elegante
                     first_type = pkm.types[0].value if pkm.types else "Normal"
                     type_color = TYPE_COLORS.get(first_type, "#64748b")
                     
-                    st.markdown(f"""
-                    <div style="
-                        background: #1e2937;
-                        border: 2px solid {type_color};
-                        border-radius: 16px;
-                        padding: 0;
-                        margin-bottom: 16px;
-                        overflow: hidden;
-                        box-shadow: 0 10px 15px -3px rgb(0 0 0 / 0.3);
-                        transition: transform 0.2s ease, box-shadow 0.2s ease;
-                    " onmouseover="this.style.transform='translateY(-4px)'; this.style.boxShadow='0 20px 25px -5px rgb(0 0 0 / 0.3)'" 
-                       onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='0 10px 15px -3px rgb(0 0 0 / 0.3)'">
+                    # Card bonito usando container + CSS global
+                    with st.container(border=True):
+                        # Barra de cor no topo (usando markdown pequeno)
+                        st.markdown(f"""
+                        <div style="height: 8px; background: linear-gradient(90deg, {type_color}, #f97316); margin: -12px -12px 12px -12px; border-radius: 14px 14px 0 0;"></div>
+                        """, unsafe_allow_html=True)
                         
-                        <!-- Barra superior colorida -->
-                        <div style="height: 6px; background: linear-gradient(90deg, {type_color}, #f97316);"></div>
+                        # Sprite centralizado
+                        if pkm.sprite:
+                            st.image(pkm.sprite, width=100)
                         
-                        <div style="padding: 16px 16px 12px 16px; text-align: center;">
-                            <!-- Sprite -->
-                            <div style="margin-bottom: 12px;">
-                                {f'<img src="{pkm.sprite}" width="110" style="image-rendering: crisp-edges; filter: drop-shadow(0 4px 6px rgba(0,0,0,0.4));">' if pkm.sprite else ''}
-                            </div>
-                            
-                            <!-- Nome -->
-                            <div style="font-size: 1.1rem; font-weight: 800; color: white; margin-bottom: 8px; line-height: 1.1;">
-                                {pkm.name}
-                            </div>
-                            
-                            <!-- Tipos -->
-                            <div style="margin-bottom: 10px;">
-                                {' '.join(get_type_badge(t.value) for t in pkm.types)}
-                            </div>
-                            
-                            <!-- Geração -->
-                            <div style="color: #94a3b8; font-size: 0.8rem; margin-bottom: 12px;">
-                                Gen {getattr(pkm, 'generation', '?')} • #{pkm.id:04d}
-                            </div>
-                        </div>
+                        # Nome
+                        st.markdown(f"<h4 style='text-align:center; margin:8px 0 4px 0; color:white;'>{pkm.name}</h4>", unsafe_allow_html=True)
                         
-                        <!-- Botão Remover -->
-                        <div style="padding: 0 12px 12px 12px;">
-                    """, unsafe_allow_html=True)
-                    
-                    if st.button("🗑️ Remover", key=f"remove_{idx}", use_container_width=True):
-                        team.remove_pokemon(idx)
-                        st.rerun()
-                    
-                    st.markdown("</div></div>", unsafe_allow_html=True)
+                        # Tipos
+                        tipos_html = ' '.join(get_type_badge(t.value) for t in pkm.types) if pkm.types else '—'
+                        st.markdown(f"<div style='text-align:center; margin-bottom:6px;'>{tipos_html}</div>", unsafe_allow_html=True)
+                        
+                        # Geração + ID
+                        st.markdown(f"<div style='text-align:center; color:#94a3b8; font-size:0.8rem; margin-bottom:12px;'>Gen {getattr(pkm, 'generation', '?')} • #{pkm.id:04d}</div>", unsafe_allow_html=True)
+                        
+                        # Botão Remover
+                        if st.button("🗑️ Remover", key=f"remove_{idx}", use_container_width=True):
+                            team.remove_pokemon(idx)
+                            st.rerun()
         else:
             st.info("Seu time está vazio. Busque e adicione Pokémon acima!")
 
