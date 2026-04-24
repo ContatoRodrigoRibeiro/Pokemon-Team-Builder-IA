@@ -437,7 +437,7 @@ with st.sidebar:
     <div style="text-align:center; padding:16px; background: linear-gradient(145deg, #1e2937, #334155); border-radius:16px; margin-bottom:20px; border:1px solid #475569;">
         <div style="font-size:32px; margin-bottom:8px;">⚔️</div>
         <h3 style="color:#f97316; margin:0; font-weight:800;">Professor Oak's Lab</h3>
-        <p style="color:#64748b; font-size:0.75rem; margin:4px 0 0 0;">Dicas para treinadores</p>
+        <p style="color:#64748b; font-size:0.75rem; margin:8px 0 0 0;">Dicas para treinadores</p>
     </div>
     """, unsafe_allow_html=True)
     
@@ -452,19 +452,7 @@ with st.sidebar:
     ]
     st.info(random.choice(tips))
     
-    st.divider()
-    st.markdown("**Atalhos Rápidos**")
-    col1, col2 = st.columns(2)
-    with col1:
-        if st.button("🔄 Recarregar", use_container_width=True):
-            st.rerun()
-    with col2:
-        if st.button("📖 Tipos", use_container_width=True):
-            st.success("Análise já usa a tabela completa!")
-    
-    st.divider()
-    st.caption("Feito com ❤️ por fãs de Pokémon • Streamlit + PokeAPI")
-    st.caption("© Nintendo / Game Freak — Apenas para diversão!")
+
 
 # ====================== TABS ======================
 tab1, tab2, tab3, tab4, tab5 = st.tabs([  # Cria as 5 abas (tabs) da interface
