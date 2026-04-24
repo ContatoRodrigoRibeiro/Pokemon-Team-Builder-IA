@@ -292,55 +292,36 @@ def render_pokemon_card(pkm, show_remove=True, key_prefix="", expansion="SV", te
     hp = getattr(pkm, 'base_stats', {}).get('hp', 80)
 
     with st.container():
-        # Card principal
+        # Card com borda colorida
         st.markdown(f"""
-        <div style="
-            background: #1e2937;
-            border: 3px solid {main_color};
-            border-radius: 18px;
-            margin: 10px 0;
-            box-shadow: 0 10px 25px rgba(0,0,0,0.5);
-            overflow: hidden;
-        ">
-            <!-- Header -->
-            <div style="
-                background: linear-gradient(90deg, {main_color}, #1e2937);
-                padding: 8px 16px;
-                display: flex;
-                justify-content: space-between;
-                align-items: center;
-                color: white;
-            ">
-                <span style="font-weight:700; font-size:12px;">BASIC</span>
-                <span style="background:#1e2937; padding:3px 10px; border-radius:6px; font-size:11px; font-weight:700;">HP {hp}</span>
-            </div>
-
-            <!-- Imagem Centralizada -->
-            <div style="background:#0f172a; padding:18px; text-align:center;">
-                <img src="{pkm.sprite or f'https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/official-artwork/{pkm.id}.png'}" 
-                     width="105" style="filter: drop-shadow(0 8px 18px rgba(0,0,0,0.6));">
-            </div>
-
-            <!-- Nome e Tipo -->
-            <div style="padding: 10px 16px; background:#1e2937; text-align:center;">
-                <div style="font-size:19px; font-weight:800; color:#f1f5f9; margin-bottom:6px;">{pkm.name}</div>
+        <div style="background:#1e2937; border:3px solid {main_color}; border-radius:18px; margin:10px 0; box-shadow:0 10px 25px rgba(0,0,0,0.5); overflow:hidden;">
         """, unsafe_allow_html=True)
 
-        # Tipo
-        if pkm.types:
-            tipo_html = ""
-            for t in pkm.types:
-                color = type_colors.get(t.value, "#64748b")
-                tipo_html += f'<span style="background:{color}; color:white; padding:3px 11px; border-radius:9999px; font-size:10px; margin:0 3px;">{t.value}</span>'
-            st.markdown(tipo_html, unsafe_allow_html=True)
-
+        # Header
         st.markdown(f"""
-                <div style="margin-top:8px; font-size:11px; color:#94a3b8;">
-                    Gen {getattr(pkm, 'generation', '?')} • #{str(getattr(pkm, 'id', '000')).zfill(3)}
-                </div>
-            </div>
+        <div style="background:linear-gradient(90deg, {main_color}, #1e2937); padding:8px 14px; display:flex; justify-content:space-between; align-items:center; color:white;">
+            <span style="font-weight:700; font-size:12px;">BASIC</span>
+            <span style="background:#1e2937; padding:3px 10px; border-radius:6px; font-size:11px; font-weight:700;">HP {hp}</span>
         </div>
         """, unsafe_allow_html=True)
+
+        # Imagem Centralizada + Nome + Tipo
+        col1, col2, col3 = st.columns([0.5, 2, 0.5])
+        with col2:
+            sprite_url = pkm.sprite or f"https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/official-artwork/{pkm.id}.png"
+            st.image(sprite_url, width=100)
+
+            st.markdown(f"<div style='text-align:center; font-size:19px; font-weight:800; color:#f1f5f9; margin:6px 0;'>{pkm.name}</div>", unsafe_allow_html=True)
+
+            # Tipos
+            if pkm.types:
+                tipos_html = " ".join([f'<span style="background:{type_colors.get(t.value, "#64748b")}; color:white; padding:3px 10px; border-radius:9999px; font-size:10px; margin:0 3px;">{t.value}</span>' for t in pkm.types])
+                st.markdown(f"<div style='text-align:center; margin-bottom:6px;'>{tipos_html}</div>", unsafe_allow_html=True)
+
+            st.markdown(f"<div style='text-align:center; color:#94a3b8; font-size:11px;'>Gen {getattr(pkm, 'generation', '?')} • #{str(getattr(pkm, 'id', '000')).zfill(3)}</div>", unsafe_allow_html=True)
+
+        # Fecha o card
+        st.markdown("</div>", unsafe_allow_html=True)
 
         # Botão Remover
         if show_remove and team_index is not None:
