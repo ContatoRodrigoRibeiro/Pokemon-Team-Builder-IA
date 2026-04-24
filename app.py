@@ -1,143 +1,251 @@
-import sys  # Importa o módulo sys, que permite manipular o caminho de busca de módulos do Python
-from pathlib import \
-    Path  # Importa a classe Path do módulo pathlib, que ajuda a trabalhar com caminhos de arquivos de forma moderna e segura
-from collections import Counter, \
-    defaultdict  # Importa Counter (para contar ocorrências) e defaultdict (dicionário com valor padrão) da biblioteca collections
-import \
-    streamlit as st  # Importa a biblioteca Streamlit com o apelido "st" – ela é responsável por criar a interface web interativa
-import \
-    pandas as pd  # Importa a biblioteca pandas com o apelido "pd" – usada para ler e manipular o arquivo CSV com os dados dos Pokémon
-import random  # Importa o módulo random, que permite gerar escolhas aleatórias (usado para gerar times)
-import \
-    requests  # Importa a biblioteca requests, que faz requisições HTTP para APIs (aqui é usada para buscar sprites na PokeAPI)
-import \
-    re  # Importa o módulo re (regular expressions), usado para extrair informações como geração do texto digitado pelo usuário
+import sys
+from pathlib import Path
+from collections import Counter, defaultdict
+import streamlit as st
+import pandas as pd
+import random
+import requests
+import re
 
 
 # ==================== CLASSES MODELS ====================
-class Type:  # Define a classe Type, que representa um tipo de Pokémon (ex: Fire, Water, Grass)
-    def __init__(self, value: str):  # Método construtor da classe Type – recebe um valor (string) e inicializa o objeto
-        self.value = value.title()  # Converte o nome do tipo para Title Case (primeira letra maiúscula) e armazena no atributo "value"
+class Type:
+    def __init__(self, value: str):
+        self.value = value.title()
 
 
-class Pokemon:  # Define a classe Pokemon, que representa um Pokémon individual com todas as suas informações
-    def __init__(self, id: int, name: str, types: list, abilities: list, base_stats: dict,
-                 sprite: str = None):  # Método construtor da classe Pokemon
-        self.id = id  # Armazena o ID numérico do Pokémon (ex: 25 para Pikachu)
-        self.name = name  # Armazena o nome do Pokémon (ex: "Pikachu")
-        self.types = types  # Armazena a lista de objetos Type (pode ter 1 ou 2 tipos)
-        self.abilities = abilities  # Armazena a lista de habilidades do Pokémon
-        self.base_stats = base_stats  # Armazena o dicionário com os stats base (HP, Attack, etc.)
-        self.sprite = sprite  # Armazena a URL da imagem (sprite) do Pokémon
-        self.generation = None  # Inicializa o atributo generation como None (será preenchido depois com a geração do Pokémon)
+class Pokemon:
+    def __init__(self, id: int, name: str, types: list, abilities: list, base_stats: dict, sprite: str = None):
+        self.id = id
+        self.name = name
+        self.types = types
+        self.abilities = abilities
+        self.base_stats = base_stats
+        self.sprite = sprite
+        self.generation = None
 
 
-class Team:  # Define a classe Team, que representa o time do jogador (máximo 6 Pokémon)
-    def __init__(self):  # Método construtor da classe Team
-        self.pokemon = []  # Cria uma lista vazia para guardar os Pokémon que estão no time atual
+class Team:
+    def __init__(self):
+        self.pokemon = []
 
-    def add_pokemon(self, pkm: Pokemon):  # Método que adiciona um Pokémon ao time
-        if len(self.pokemon) >= 6:  # Verifica se o time já tem 6 Pokémon (limite máximo)
-            return False  # Se estiver cheio, retorna False (não adicionou)
-        self.pokemon.append(pkm)  # Adiciona o Pokémon na lista
-        return True  # Retorna True indicando que foi adicionado com sucesso
+    def add_pokemon(self, pkm: Pokemon):
+        if len(self.pokemon) >= 6:
+            return False
+        self.pokemon.append(pkm)
+        return True
 
-    def remove_pokemon(self, index: int):  # Método que remove um Pokémon do time pela posição
-        if 0 <= index < len(self.pokemon):  # Verifica se o índice está dentro dos limites da lista
-            del self.pokemon[index]  # Remove o Pokémon da posição indicada
-            return True  # Retorna True se removeu com sucesso
-        return False  # Retorna False se o índice era inválido
+    def remove_pokemon(self, index: int):
+        if 0 <= index < len(self.pokemon):
+            del self.pokemon[index]
+            return True
+        return False
 
 
 # ==================== CONFIGURAÇÃO INICIAL ====================
-st.set_page_config(page_title="Pokémon Team Builder IA", page_icon="⚔️",
-                   layout="wide")  # Configura a página do Streamlit: título, ícone e layout largo
-st.title("🤖 Pokémon Team Builder IA")  # Exibe o título principal da aplicação na tela
-st.subheader("Monte times imbatíveis com IA • Gen 9 + anteriores")  # Exibe o subtítulo explicativo
+st.set_page_config(page_title="Pokémon Team Builder IA", page_icon="⚔️", layout="wide")
 
-if "current_team" not in st.session_state:  # Verifica se a variável "current_team" ainda não existe no session_state
-    st.session_state.current_team = Team()  # Cria um novo objeto Team e guarda no session_state (para manter o time entre recarregamentos)
-if "pokemon_cache" not in st.session_state:  # Verifica se o cache de Pokémon ainda não existe
-    st.session_state.pokemon_cache = {}  # Cria um dicionário vazio para cachear Pokémon buscados via PokeAPI
-if "last_generated_team" not in st.session_state:  # Verifica se o time gerado pela IA ainda não existe
-    st.session_state.last_generated_team = []  # Cria uma lista vazia para guardar o último time gerado pela IA
+# ==================== TEMA POKÉMON (CSS) ====================
+st.markdown("""
+<style>
+    @import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap');
+
+    .stApp {
+        background: linear-gradient(135deg, #0f172a 0%, #1e2937 100%);
+        background-attachment: fixed;
+    }
+
+    .stApp::before {
+        content: '';
+        position: fixed;
+        top: 0; left: 0; right: 0; bottom: 0;
+        background-image: 
+            radial-gradient(circle at 25% 30%, rgba(255,215,0,0.06) 0%, transparent 50%),
+            radial-gradient(circle at 75% 70%, rgba(255,0,0,0.05) 0%, transparent 50%);
+        pointer-events: none;
+        z-index: -1;
+    }
+
+    h1, h2, h3 {
+        font-family: 'Press Start 2P', system-ui !important;
+        color: #ffcb05 !important;
+        text-shadow: 2px 2px 0 #3b4cca;
+    }
+
+    .pokemon-card {
+        background: #1e2937;
+        border: 4px solid #ffcb05;
+        border-radius: 16px;
+        padding: 0;
+        margin: 8px 0;
+        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5),
+                    inset 0 0 20px rgba(255, 215, 0, 0.1);
+        transition: all 0.3s cubic-bezier(0.23, 1, 0.32, 1);
+        overflow: hidden;
+        position: relative;
+    }
+
+    .pokemon-card:hover {
+        transform: translateY(-12px) scale(1.03);
+        box-shadow: 0 20px 40px rgba(255, 203, 5, 0.3),
+                    0 0 30px rgba(59, 76, 202, 0.4);
+        border-color: #ff0000;
+    }
+
+    .card-header {
+        height: 42px;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 0 12px;
+        background: linear-gradient(90deg, #3b4cca, #ff0000);
+    }
+
+    .type-badge {
+        display: inline-block;
+        padding: 2px 10px;
+        border-radius: 9999px;
+        font-size: 10px;
+        font-weight: bold;
+        color: white;
+        margin: 0 2px;
+        text-shadow: 1px 1px 2px rgba(0,0,0,0.6);
+        box-shadow: 0 2px 4px rgba(0,0,0,0.3);
+    }
+
+    .sprite-container {
+        background: linear-gradient(180deg, #334155 0%, #1e2937 100%);
+        padding: 12px;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        min-height: 140px;
+    }
+
+    .sprite-container img {
+        filter: drop-shadow(0 8px 16px rgba(0,0,0,0.6));
+        transition: transform 0.3s ease;
+    }
+
+    .pokemon-card:hover .sprite-container img {
+        transform: scale(1.15);
+    }
+
+    .card-body {
+        padding: 12px 16px 16px;
+        text-align: center;
+    }
+
+    .pokemon-name {
+        font-size: 18px;
+        font-weight: 800;
+        color: #ffcb05;
+        margin: 4px 0 8px;
+        text-shadow: 2px 2px 0 #3b4cca;
+        letter-spacing: 1px;
+    }
+
+    .card-footer {
+        background: #0f172a;
+        padding: 8px 12px;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        font-size: 11px;
+        color: #94a3b8;
+    }
+
+    .stButton button {
+        background: linear-gradient(#ff0000, #cc0000) !important;
+        color: white !important;
+        border: 3px solid #ffcb05 !important;
+        font-weight: bold !important;
+        border-radius: 8px !important;
+    }
+
+    .stButton button:hover {
+        background: linear-gradient(#cc0000, #990000) !important;
+        transform: scale(1.05);
+    }
+</style>
+""", unsafe_allow_html=True)
+
+st.title("⚔️ Pokémon Team Builder IA")
+st.markdown(
+    "<p style='text-align:center; color:#94a3b8; margin-top:-10px;'>Monte times imbatíveis com IA • Estilo TCG</p>",
+    unsafe_allow_html=True)
+
+if "current_team" not in st.session_state:
+    st.session_state.current_team = Team()
+if "pokemon_cache" not in st.session_state:
+    st.session_state.pokemon_cache = {}
+if "last_generated_team" not in st.session_state:
+    st.session_state.last_generated_team = []
 
 
-def get_generation_by_id(pkm_id):  # Define uma função que calcula a geração de um Pokémon pelo ID
+# ==================== FUNÇÕES AUXILIARES ====================
+def get_generation_by_id(pkm_id):
     if pkm_id <= 151:
-        return 1  # Geração 1 (Kanto) – primeiros 151 Pokémon
+        return 1
     elif pkm_id <= 251:
-        return 2  # Geração 2 (Johto)
+        return 2
     elif pkm_id <= 386:
-        return 3  # Geração 3 (Hoenn)
+        return 3
     elif pkm_id <= 493:
-        return 4  # Geração 4 (Sinnoh)
+        return 4
     elif pkm_id <= 649:
-        return 5  # Geração 5 (Unova)
+        return 5
     elif pkm_id <= 721:
-        return 6  # Geração 6 (Kalos)
+        return 6
     elif pkm_id <= 809:
-        return 7  # Geração 7 (Alola)
+        return 7
     elif pkm_id <= 905:
-        return 8  # Geração 8 (Galar)
+        return 8
     else:
-        return 9  # Qualquer ID maior é considerado Geração 9 (Paldea)
+        return 9
 
 
-def extrair_geracao_do_prompt(
-        prompt: str):  # Função que analisa o texto digitado pelo usuário e tenta extrair a geração (ex: "gen 9")
-    if not prompt:  # Se o prompt estiver vazio
-        return None  # Retorna None (não tem geração)
-    prompt = prompt.lower().strip()  # Converte o texto para minúsculo e remove espaços das pontas
-    padroes = [  # Lista de padrões de expressões regulares para identificar a geração
-        r'(?:gen|geração|geracao|generação|g)\s*(\d+)',  # Ex: "gen 9", "geração 9", "g 9"
-        r'g(\d+)',  # Ex: "g9"
-        r'(\d+)[ªa]?\s*(?:gen|geração|geracao|generação)',  # Ex: "9 gen"
-        r'(?:gen|geração|geracao|generação)\s*(\d+)[ªa]?',  # Ex: "gen 9ª"
+def extrair_geracao_do_prompt(prompt: str):
+    if not prompt: return None
+    prompt = prompt.lower().strip()
+    padroes = [
+        r'(?:gen|geração|geracao|generação|g)\s*(\d+)',
+        r'g(\d+)',
+        r'(\d+)[ªa]?\s*(?:gen|geração|geracao|generação)',
+        r'(?:gen|geração|geracao|generação)\s*(\d+)[ªa]?',
     ]
-    for padrao in padroes:  # Percorre cada padrão
-        match = re.search(padrao, prompt)  # Tenta encontrar o padrão no texto
-        if match:  # Se encontrou
-            return int(match.group(1))  # Retorna o número da geração encontrado
-    return None  # Se nenhum padrão bateu, retorna None
+    for padrao in padroes:
+        match = re.search(padrao, prompt)
+        if match:
+            return int(match.group(1))
+    return None
 
 
-# ==================== MAPA DE TIPOS ====================
-pt_to_en = {  # Dicionário que traduz nomes de tipos do português para o inglês (usado pela PokeAPI)
-    "Planta": "Grass", "Grama": "Grass",
-    "Fogo": "Fire",
-    "Água": "Water", "Agua": "Water", "agua": "Water",
-    "Elétrico": "Electric", "Eletrico": "Electric", "eletrico": "Electric",
-    "Gelo": "Ice",
-    "Lutador": "Fighting", "Luta": "Fighting",
-    "Veneno": "Poison",
-    "Terra": "Ground",
-    "Voador": "Flying",
-    "Psíquico": "Psychic", "Psiquico": "Psychic",
-    "Inseto": "Bug",
-    "Pedra": "Rock", "Rocha": "Rock", "pedra": "Rock", "rocha": "Rock",
-    "Fantasma": "Ghost",
-    "Dragão": "Dragon", "Dragao": "Dragon",
-    "Sombrio": "Dark",
-    "Fada": "Fairy",
-    "Aço": "Steel",
-    "Normal": "Normal"
+pt_to_en = {
+    "Planta": "Grass", "Grama": "Grass", "Fogo": "Fire", "Água": "Water", "Agua": "Water",
+    "Elétrico": "Electric", "Eletrico": "Electric", "Gelo": "Ice", "Lutador": "Fighting",
+    "Luta": "Fighting", "Veneno": "Poison", "Terra": "Ground", "Voador": "Flying",
+    "Psíquico": "Psychic", "Psiquico": "Psychic", "Inseto": "Bug", "Pedra": "Rock",
+    "Rocha": "Rock", "Fantasma": "Ghost", "Dragão": "Dragon", "Dragao": "Dragon",
+    "Sombrio": "Dark", "Fada": "Fairy", "Aço": "Steel", "Normal": "Normal"
 }
 
-# ==================== TABELA DE EFETIVIDADE DE TIPOS ====================
 TYPE_CHART = {
     "Normal": {"Rock": 0.5, "Ghost": 0, "Steel": 0.5},
     "Fire": {"Fire": 0.5, "Water": 0.5, "Grass": 2, "Ice": 2, "Bug": 2, "Rock": 0.5, "Dragon": 0.5, "Steel": 2},
     "Water": {"Fire": 2, "Water": 0.5, "Grass": 0.5, "Ground": 2, "Rock": 2, "Dragon": 0.5},
-    "Grass": {"Fire": 0.5, "Water": 2, "Grass": 0.5, "Poison": 0.5, "Ground": 2, "Flying": 0.5, "Bug": 0.5, "Rock": 2, "Dragon": 0.5, "Steel": 0.5},
+    "Grass": {"Fire": 0.5, "Water": 2, "Grass": 0.5, "Poison": 0.5, "Ground": 2, "Flying": 0.5, "Bug": 0.5, "Rock": 2,
+              "Dragon": 0.5, "Steel": 0.5},
     "Electric": {"Water": 2, "Electric": 0.5, "Grass": 0.5, "Ground": 0, "Flying": 2, "Dragon": 0.5},
     "Ice": {"Fire": 0.5, "Water": 0.5, "Grass": 2, "Ice": 0.5, "Ground": 2, "Flying": 2, "Dragon": 2, "Steel": 0.5},
-    "Fighting": {"Normal": 2, "Ice": 2, "Poison": 0.5, "Flying": 0.5, "Psychic": 0.5, "Bug": 0.5, "Rock": 2, "Ghost": 0, "Dark": 2, "Steel": 2, "Fairy": 0.5},
+    "Fighting": {"Normal": 2, "Ice": 2, "Poison": 0.5, "Flying": 0.5, "Psychic": 0.5, "Bug": 0.5, "Rock": 2, "Ghost": 0,
+                 "Dark": 2, "Steel": 2, "Fairy": 0.5},
     "Poison": {"Grass": 2, "Poison": 0.5, "Ground": 0.5, "Rock": 0.5, "Ghost": 0.5, "Steel": 0, "Fairy": 2},
     "Ground": {"Fire": 2, "Electric": 2, "Grass": 0.5, "Poison": 2, "Flying": 0, "Bug": 0.5, "Rock": 2, "Steel": 2},
     "Flying": {"Electric": 0.5, "Grass": 2, "Fighting": 2, "Bug": 2, "Rock": 0.5, "Steel": 0.5},
     "Psychic": {"Fighting": 2, "Poison": 2, "Psychic": 0.5, "Dark": 0, "Steel": 0.5},
-    "Bug": {"Fire": 0.5, "Grass": 2, "Fighting": 0.5, "Poison": 0.5, "Flying": 0.5, "Psychic": 2, "Ghost": 0.5, "Dark": 2, "Steel": 0.5, "Fairy": 0.5},
+    "Bug": {"Fire": 0.5, "Grass": 2, "Fighting": 0.5, "Poison": 0.5, "Flying": 0.5, "Psychic": 2, "Ghost": 0.5,
+            "Dark": 2, "Steel": 0.5, "Fairy": 0.5},
     "Rock": {"Fire": 2, "Ice": 2, "Fighting": 0.5, "Ground": 0.5, "Flying": 2, "Bug": 2, "Steel": 0.5},
     "Ghost": {"Normal": 0, "Psychic": 2, "Ghost": 2, "Dark": 0.5},
     "Dragon": {"Dragon": 2, "Steel": 0.5, "Fairy": 0},
@@ -146,129 +254,160 @@ TYPE_CHART = {
     "Fairy": {"Fire": 0.5, "Fighting": 2, "Poison": 0.5, "Dragon": 2, "Dark": 2, "Steel": 0.5}
 }
 
-def get_multiplier(attacker_type: str,
-                   defender_types: list) -> float:  # Função que calcula o multiplicador de dano de um tipo atacante contra os tipos do defensor
-    multiplier = 1.0  # Começa com multiplicador neutro (1x)
-    for defender in defender_types:  # Percorre cada tipo do Pokémon defensor
-        d_value = defender.value if isinstance(defender, Type) else str(
-            defender)  # Pega o nome do tipo (tratando se for objeto Type ou string)
-        multiplier *= TYPE_CHART.get(attacker_type, {}).get(d_value,
-                                                            1.0)  # Multiplica pelo valor da tabela (ou 1.0 se não existir)
-    return multiplier  # Retorna o multiplicador final (ex: 4.0 = super efetivo em dual-type)
+
+def get_multiplier(attacker_type: str, defender_types: list) -> float:
+    multiplier = 1.0
+    for defender in defender_types:
+        d_value = defender.value if isinstance(defender, Type) else str(defender)
+        multiplier *= TYPE_CHART.get(attacker_type, {}).get(d_value, 1.0)
+    return multiplier
 
 
-def analyze_team_weaknesses(team: Team):  # Função que analisa as fraquezas defensivas do time inteiro
-    if not team.pokemon:  # Se o time estiver vazio
-        return []  # Retorna lista vazia
-    weakness_score = defaultdict(float)  # Cria um dicionário que começa com valor 0.0 para qualquer chave nova
-    for pkm in team.pokemon:  # Para cada Pokémon no time
-        p_types = pkm.types  # Pega os tipos dele
-        for atk_type in TYPE_CHART.keys():  # Para cada tipo possível de ataque
-            mult = get_multiplier(atk_type, p_types)  # Calcula o multiplicador
-            if mult > 1.0:  # Se for super efetivo (maior que 1x)
-                weakness_score[atk_type] += mult  # Soma o multiplicador na pontuação de fraqueza
-    sorted_weak = sorted(weakness_score.items(), key=lambda x: x[1],
-                         reverse=True)  # Ordena do mais fraco para o menos fraco
-    return sorted_weak[:8]  # Retorna as 8 fraquezas mais graves
+def analyze_team_weaknesses(team: Team):
+    if not team.pokemon: return []
+    weakness_score = defaultdict(float)
+    for pkm in team.pokemon:
+        p_types = pkm.types
+        for atk_type in TYPE_CHART.keys():
+            mult = get_multiplier(atk_type, p_types)
+            if mult > 1.0:
+                weakness_score[atk_type] += mult
+    sorted_weak = sorted(weakness_score.items(), key=lambda x: x[1], reverse=True)
+    return sorted_weak[:8]
 
 
-def analyze_team_coverage(team: Team):  # Função que analisa a cobertura ofensiva do time
-    if not team.pokemon:  # Se o time estiver vazio
-        return []  # Retorna lista vazia
-    coverage = defaultdict(float)  # Dicionário para somar cobertura ofensiva
-    for pkm in team.pokemon:  # Para cada Pokémon no time
-        for own_type in [t.value for t in pkm.types]:  # Para cada tipo do Pokémon
-            for def_type in TYPE_CHART.keys():  # Para cada tipo possível de defesa
-                mult = TYPE_CHART.get(own_type, {}).get(def_type, 1.0)  # Pega o multiplicador de ataque
-                if mult > 1.0:  # Se for super efetivo
-                    coverage[def_type] += mult  # Soma na cobertura
-    return sorted(coverage.items(), key=lambda x: x[1], reverse=True)[:8]  # Retorna os 8 tipos mais bem cobertos
+def analyze_team_coverage(team: Team):
+    if not team.pokemon: return []
+    coverage = defaultdict(float)
+    for pkm in team.pokemon:
+        for own_type in [t.value for t in pkm.types]:
+            for def_type in TYPE_CHART.keys():
+                mult = TYPE_CHART.get(own_type, {}).get(def_type, 1.0)
+                if mult > 1.0:
+                    coverage[def_type] += mult
+    return sorted(coverage.items(), key=lambda x: x[1], reverse=True)[:8]
 
 
-def calculate_synergy_score(team: Team) -> int:  # Função que calcula uma pontuação de sinergia do time (0 a 100)
-    if not team.pokemon:  # Se o time estiver vazio
-        return 0  # Retorna 0
-    type_set = set(
-        t.value for pkm in team.pokemon for t in pkm.types)  # Cria um conjunto com todos os tipos únicos do time
-    diversity = len(type_set) * 12  # Quanto mais tipos diferentes, maior a diversidade (máximo 18 tipos × 12)
-    size_bonus = len(team.pokemon) * 8  # Bônus por ter mais Pokémon no time
-    random_bonus = random.randint(5, 15)  # Pequeno bônus aleatório para dar variação
-    return min(100, diversity + size_bonus + random_bonus)  # Retorna a pontuação, limitando em 100
+def calculate_synergy_score(team: Team) -> int:
+    if not team.pokemon: return 0
+    type_set = set(t.value for pkm in team.pokemon for t in pkm.types)
+    diversity = len(type_set) * 12
+    size_bonus = len(team.pokemon) * 8
+    random_bonus = random.randint(5, 15)
+    return min(100, diversity + size_bonus + random_bonus)
+
+
+# ==================== FUNÇÃO DE CARD TCG ====================
+def render_pokemon_card(pkm, show_remove=True, key_prefix="", expansion="SV", team_index=None):
+    type_colors = {
+        "Normal": "#A8A77A", "Fire": "#EE8130", "Water": "#6390F0",
+        "Electric": "#F7D02C", "Grass": "#7AC74C", "Ice": "#96D9D6",
+        "Fighting": "#C22E28", "Poison": "#A33EA1", "Ground": "#E2BF65",
+        "Flying": "#A98FF3", "Psychic": "#F95587", "Bug": "#A6B91A",
+        "Rock": "#B6A136", "Ghost": "#735797", "Dragon": "#6F35FC",
+        "Dark": "#705746", "Steel": "#B7B7CE", "Fairy": "#D685AD"
+    }
+
+    types_html = ""
+    if hasattr(pkm, 'types') and pkm.types:
+        for t in pkm.types:
+            color = type_colors.get(t.value, "#64748b")
+            types_html += f'<span class="type-badge" style="background:{color}">{t.value}</span>'
+
+    sprite_url = pkm.sprite
+    if not sprite_url or "official-artwork" not in str(sprite_url):
+        sprite_url = f"https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/official-artwork/{pkm.id}.png"
+
+    card_html = f"""
+    <div class="pokemon-card">
+        <div class="card-header">
+            <div style="display:flex; gap:6px;">{types_html}</div>
+            <div style="color:#ffcb05; font-size:10px; font-weight:bold;">{expansion}</div>
+        </div>
+
+        <div class="sprite-container">
+            <img src="{sprite_url}" width="115" style="image-rendering: crisp-edges;">
+        </div>
+
+        <div class="card-body">
+            <div class="pokemon-name">{pkm.name}</div>
+            <div style="font-size:11px; color:#94a3b8;">Gen {getattr(pkm, 'generation', '?')}</div>
+        </div>
+
+        <div class="card-footer">
+            <span style="font-weight:bold;">#{str(getattr(pkm, 'id', '000')).zfill(3)}</span>
+        </div>
+    </div>
+    """
+    st.markdown(card_html, unsafe_allow_html=True)
+
+    if show_remove and team_index is not None:
+        if st.button("🗑️ Remover", key=f"remove_{key_prefix}_{team_index}", use_container_width=True):
+            st.session_state.current_team.remove_pokemon(team_index)
+            st.rerun()
 
 
 # ==================== CARREGAMENTO DO CSV ====================
-if "full_pokedex" not in st.session_state:  # Verifica se o pokedex completo ainda não foi carregado
-    try:  # Tenta executar o bloco de carregamento
-        df = pd.read_csv("data/pokemon_cleaned_pt.csv")  # Lê o arquivo CSV com todos os Pokémon em português
-        st.session_state.full_pokedex = []  # Cria lista vazia para guardar os objetos Pokemon
-        for _, row in df.iterrows():  # Percorre cada linha do DataFrame
-            pkm_id = int(row.get("id_pokedex", row.get("id", 0)))  # Pega o ID do Pokémon (usa id_pokedex ou id)
-            nome = str(row.get("nome", "")).strip()  # Pega o nome e remove espaços
-            try:  # Tenta pegar a geração do CSV
-                gen = int(row["geracao"])  # Se existir, usa o valor da coluna "geracao"
-            except:  # Se der erro
-                gen = get_generation_by_id(pkm_id)  # Calcula a geração pelo ID
-            types = []  # Lista vazia para os tipos
-            if pd.notna(row.get("tipo_1")):  # Se existe tipo 1
-                tipo_pt = str(row["tipo_1"]).strip().title()  # Pega e formata o tipo em português
-                tipo_en = pt_to_en.get(tipo_pt, tipo_pt)  # Traduz para inglês
-                types.append(Type(tipo_en))  # Cria objeto Type e adiciona
-            if pd.notna(row.get("tipo_2")):  # Se existe tipo 2
-                tipo_pt = str(row["tipo_2"]).strip().title()  # Mesma coisa para o segundo tipo
+if "full_pokedex" not in st.session_state:
+    try:
+        df = pd.read_csv("data/pokemon_cleaned_pt.csv")
+        st.session_state.full_pokedex = []
+        for _, row in df.iterrows():
+            pkm_id = int(row.get("id_pokedex", row.get("id", 0)))
+            nome = str(row.get("nome", "")).strip()
+            try:
+                gen = int(row["geracao"])
+            except:
+                gen = get_generation_by_id(pkm_id)
+            types = []
+            if pd.notna(row.get("tipo_1")):
+                tipo_pt = str(row["tipo_1"]).strip().title()
                 tipo_en = pt_to_en.get(tipo_pt, tipo_pt)
-                if tipo_en not in [t.value for t in types]:  # Evita duplicar tipo
+                types.append(Type(tipo_en))
+            if pd.notna(row.get("tipo_2")):
+                tipo_pt = str(row["tipo_2"]).strip().title()
+                tipo_en = pt_to_en.get(tipo_pt, tipo_pt)
+                if tipo_en not in [t.value for t in types]:
                     types.append(Type(tipo_en))
-            sprite = str(row.get("url_sprite", "")).strip() or None  # Pega a URL da sprite ou None
-            abilities = []  # Lista de habilidades
-            for col in ["habilidade_1", "habilidade_2", "habilidade_oculta"]:  # Percorre as colunas de habilidades
-                if col in row and pd.notna(row[col]):  # Se a coluna existe e não é nula
-                    abilities.extend([a.strip().title() for a in str(row[col]).split(",") if
-                                      a.strip()])  # Adiciona as habilidades separadas por vírgula
-            pkm = Pokemon(  # Cria o objeto Pokemon
-                id=pkm_id,
-                name=nome.replace("-", " ").title(),
-                types=types,
-                abilities=list(dict.fromkeys(abilities)),  # Remove duplicatas mantendo ordem
-                base_stats={},
-                sprite=sprite
-            )
-            pkm.generation = gen  # Define a geração
-            st.session_state.full_pokedex.append(pkm)  # Adiciona na pokedex completa
-        gen_count = Counter(p.generation for p in st.session_state.full_pokedex)  # Conta quantos Pokémon por geração
-        st.success(f"✅ {len(st.session_state.full_pokedex)} Pokémon carregados!")  # Mostra mensagem de sucesso
-        st.info(f"📊 Gerações: {dict(sorted(gen_count.items()))}")  # Mostra quantos Pokémon por geração
-    except Exception as e:  # Se der qualquer erro no carregamento
-        st.error(f"Erro ao carregar CSV: {e}")  # Mostra erro na tela
-        st.session_state.full_pokedex = []  # Deixa a pokedex vazia
+            sprite = str(row.get("url_sprite", "")).strip() or None
+            abilities = []
+            for col in ["habilidade_1", "habilidade_2", "habilidade_oculta"]:
+                if col in row and pd.notna(row[col]):
+                    abilities.extend([a.strip().title() for a in str(row[col]).split(",") if a.strip()])
+            pkm = Pokemon(id=pkm_id, name=nome.replace("-", " ").title(), types=types,
+                          abilities=list(dict.fromkeys(abilities)), base_stats={}, sprite=sprite)
+            pkm.generation = gen
+            st.session_state.full_pokedex.append(pkm)
+        st.success(f"✅ {len(st.session_state.full_pokedex)} Pokémon carregados!")
+    except Exception as e:
+        st.error(f"Erro ao carregar CSV: {e}")
+        st.session_state.full_pokedex = []
 
 # ====================== TABS ======================
-tab1, tab2, tab3, tab4, tab5 = st.tabs([  # Cria as 5 abas (tabs) da interface
-    "🛠️ Modo Manual",
-    "🔬 Análise Avançada",
-    "🧠 Recomendações Inteligentes",
-    "🤖 Gerar com IA",
-    "🌟 Modo IA Híbrido + Simulador"
+tab1, tab2, tab3, tab4, tab5 = st.tabs([
+    "🛠️ Modo Manual", "🔬 Análise Avançada", "🧠 Recomendações Inteligentes",
+    "🤖 Gerar com IA", "🌟 Modo IA Híbrido + Simulador"
 ])
 
-# ====================== TAB 1 - MANUAL ======================
-with tab1:  # Tudo dentro deste bloco aparece na aba "Modo Manual"
-    st.header("Monte seu Time Manualmente")  # Título da aba
-    col_busca, col_time = st.columns([2, 3])  # Divide a tela em duas colunas (2/5 e 3/5)
-    with col_busca:  # Dentro da coluna de busca
-        st.subheader("🔍 Buscar Pokémon")  # Subtítulo
-        pokemon_name = st.text_input("Nome do Pokémon (em inglês)",
-                                     placeholder="pikachu").strip().lower()  # Campo de texto para digitar nome
-        if st.button("➕ Buscar e Adicionar", type="primary", use_container_width=True):  # Botão de busca
-            if pokemon_name:  # Se digitou algo
-                try:  # Tenta buscar
-                    if pokemon_name in st.session_state.pokemon_cache:  # Se já está no cache
-                        pkm = st.session_state.pokemon_cache[pokemon_name]  # Usa o cache (mais rápido)
-                    else:  # Se não está no cache
+# ====================== TAB 1 - MANUAL (COM CARDS NOVOS) ======================
+with tab1:
+    st.header("Monte seu Time Manualmente")
+    col_busca, col_time = st.columns([2, 3])
+
+    with col_busca:
+        st.subheader("🔍 Buscar Pokémon")
+        pokemon_name = st.text_input("Nome do Pokémon (em inglês)", placeholder="pikachu").strip().lower()
+        if st.button("➕ Buscar e Adicionar", type="primary", use_container_width=True):
+            if pokemon_name:
+                try:
+                    if pokemon_name in st.session_state.pokemon_cache:
+                        pkm = st.session_state.pokemon_cache[pokemon_name]
+                    else:
                         r = requests.get(f"https://pokeapi.co/api/v2/pokemon/{pokemon_name.replace(' ', '-')}",
-                                         timeout=10)  # Faz requisição na PokeAPI
-                        if r.status_code == 200:  # Se encontrou
-                            data = r.json()  # Converte resposta para dicionário
-                            pkm = Pokemon(  # Cria objeto Pokemon com dados da API
+                                         timeout=10)
+                        if r.status_code == 200:
+                            data = r.json()
+                            pkm = Pokemon(
                                 id=data["id"],
                                 name=data["name"].replace("-", " ").title(),
                                 types=[Type(t["type"]["name"].title()) for t in data["types"]],
@@ -276,213 +415,187 @@ with tab1:  # Tudo dentro deste bloco aparece na aba "Modo Manual"
                                 base_stats={stat["stat"]["name"]: stat["base_stat"] for stat in data["stats"]},
                                 sprite=data["sprites"]["front_default"]
                             )
-                            pkm.generation = get_generation_by_id(pkm.id)  # Define geração
-                            st.session_state.pokemon_cache[pokemon_name] = pkm  # Salva no cache
-                        else:  # Se não encontrou
-                            st.error("❌ Pokémon não encontrado.")  # Mostra erro
-                            st.stop()  # Para a execução
-                    if st.session_state.current_team.add_pokemon(pkm):  # Tenta adicionar ao time
-                        st.success(f"✅ {pkm.name} adicionado!")  # Sucesso
-                        st.rerun()  # Recarrega a página
-                    else:  # Se time cheio
-                        st.error("❌ Time completo! (máximo 6)")  # Erro
-                except Exception as e:  # Qualquer erro
-                    st.error(f"Erro: {e}")  # Mostra erro
-    with col_time:  # Coluna do time atual
-        st.subheader("Seu Time Atual")  # Subtítulo
-        team = st.session_state.current_team  # Pega o time atual
-        if team.pokemon:  # Se tem Pokémon
-            for i, pkm in enumerate(team.pokemon):  # Para cada Pokémon no time
-                with st.container(border=True):  # Cria um card com borda
-                    cols = st.columns([1, 4, 1])  # Divide em 3 colunas internas
-                    with cols[0]:  # Coluna da imagem
-                        if pkm.sprite: st.image(pkm.sprite, width=90)  # Mostra sprite
-                    with cols[1]:  # Coluna de informações
-                        st.markdown(f"**{pkm.name}**")  # Nome em negrito
-                        tipos = ', '.join(t.value for t in pkm.types) if pkm.types else '—'  # Lista de tipos
-                        gen = getattr(pkm, 'generation', '?')  # Geração
-                        st.caption(f"Tipos: {tipos} | Gen {gen}")  # Legenda
-                    with cols[2]:  # Coluna do botão remover
-                        if st.button("🗑️", key=f"remove_{i}"):  # Botão de remover
-                            team.remove_pokemon(i)  # Remove
-                            st.rerun()  # Recarrega
-        else:  # Se time vazio
-            st.info("Time vazio. Adicione Pokémon acima.")  # Mensagem informativa
+                            pkm.generation = get_generation_by_id(pkm.id)
+                            st.session_state.pokemon_cache[pokemon_name] = pkm
+                        else:
+                            st.error("❌ Pokémon não encontrado.")
+                            st.stop()
+                    if st.session_state.current_team.add_pokemon(pkm):
+                        st.success(f"✅ {pkm.name} adicionado!")
+                        st.rerun()
+                    else:
+                        st.error("❌ Time completo! (máximo 6)")
+                except Exception as e:
+                    st.error(f"Erro: {e}")
+
+    with col_time:
+        st.subheader("Seu Time Atual")
+        team = st.session_state.current_team
+        if team.pokemon:
+            cols = st.columns(3)
+            for i, pkm in enumerate(team.pokemon):
+                with cols[i % 3]:
+                    render_pokemon_card(pkm, show_remove=True, key_prefix=f"manual_{i}", expansion="SV", team_index=i)
+        else:
+            st.info("Time vazio. Adicione Pokémon acima.")
 
 # ====================== TAB 2 - ANÁLISE AVANÇADA ======================
-with tab2:  # Aba de análise
-    st.header("🔬 Análise Avançada")  # Título
-    team = st.session_state.current_team  # Pega o time
-    if not team.pokemon:  # Se vazio
-        st.warning("Monte um time primeiro para analisar!")  # Aviso
-    else:  # Se tem time
-        st.subheader("📊 Seu time atual")  # Subtítulo
-        for pkm in team.pokemon:  # Mostra cada Pokémon
-            tipos = ', '.join(t.value for t in pkm.types)  # Tipos
-            st.write(f"• **{pkm.name}** — {tipos} (Gen {getattr(pkm, 'generation', '?')})")  # Linha de texto
-
-        st.divider()  # Linha divisória
-        col_ana1, col_ana2 = st.columns(2)  # Duas colunas
-
-        with col_ana1:  # Coluna de fraquezas
-            st.subheader("⚠️ Fraquezas Defensivas")  # Título
-            weaknesses = analyze_team_weaknesses(team)  # Chama função de análise
-            if weaknesses:  # Se tem fraquezas
-                for atk_type, score in weaknesses:  # Para cada fraqueza
-                    color = "🔴" if score > 4 else "🟠" if score > 2 else "🟡"  # Define cor conforme gravidade
-                    st.markdown(f"{color} **{atk_type}** — multiplicador {score:.1f}x")  # Mostra
-            else:  # Se nenhuma fraqueza
-                st.success("Nenhuma fraqueza crítica!")  # Mensagem positiva
-
-        with col_ana2:  # Coluna de cobertura
-            st.subheader("🔥 Cobertura Ofensiva")  # Título
-            coverage = analyze_team_coverage(team)  # Chama função
-            for def_type, score in coverage:  # Para cada tipo coberto
-                st.markdown(f"✅ **{def_type}** — super efetivo ({score:.1f}x)")  # Mostra
-
-        st.divider()  # Outra linha divisória
-        synergy = calculate_synergy_score(team)  # Calcula pontuação de sinergia
-        st.metric("Pontuação de Sinergia do Time", f"{synergy}/100")  # Mostra métrica
-        if synergy >= 80:  # Feedback conforme pontuação
+with tab2:
+    st.header("🔬 Análise Avançada")
+    team = st.session_state.current_team
+    if not team.pokemon:
+        st.warning("Monte um time primeiro para analisar!")
+    else:
+        st.subheader("📊 Seu time atual")
+        for pkm in team.pokemon:
+            tipos = ', '.join(t.value for t in pkm.types)
+            st.write(f"• **{pkm.name}** — {tipos} (Gen {getattr(pkm, 'generation', '?')})")
+        st.divider()
+        col_ana1, col_ana2 = st.columns(2)
+        with col_ana1:
+            st.subheader("⚠️ Fraquezas Defensivas")
+            weaknesses = analyze_team_weaknesses(team)
+            if weaknesses:
+                for atk_type, score in weaknesses:
+                    color = "🔴" if score > 4 else "🟠" if score > 2 else "🟡"
+                    st.markdown(f"{color} **{atk_type}** — multiplicador {score:.1f}x")
+            else:
+                st.success("Nenhuma fraqueza crítica!")
+        with col_ana2:
+            st.subheader("🔥 Cobertura Ofensiva")
+            coverage = analyze_team_coverage(team)
+            for def_type, score in coverage:
+                st.markdown(f"✅ **{def_type}** — super efetivo ({score:.1f}x)")
+        st.divider()
+        synergy = calculate_synergy_score(team)
+        st.metric("Pontuação de Sinergia do Time", f"{synergy}/100")
+        if synergy >= 80:
             st.success("🎉 Time muito equilibrado e sinérgico!")
         elif synergy >= 60:
             st.info("👍 Boa sinergia")
         else:
             st.warning("⚠️ Precisa de ajustes para maior sinergia")
 
-# ====================== TAB 3 - RECOMENDAÇÕES INTELIGENTES ======================
-with tab3:  # Aba de recomendações
-    st.header("🧠 Recomendações Inteligentes")  # Título
-    team = st.session_state.current_team  # Time atual
-    if not team.pokemon:  # Se vazio
-        st.warning("Monte um time primeiro para receber sugestões!")  # Aviso
-    else:  # Se tem time
-        st.subheader("Sugestões para completar seu time")  # Subtítulo
-        weaknesses = [w[0] for w in analyze_team_weaknesses(team)]  # Lista só dos tipos fracos
-        st.write("**Fraquezas detectadas:**", ", ".join(weaknesses[:4]) or "Nenhuma crítica")  # Mostra fraquezas
-
-        if st.button("🔍 Gerar Recomendações Inteligentes", type="primary"):  # Botão para gerar sugestões
-            with st.spinner("Analisando melhorias..."):  # Mostra loading
-                recommendations = []  # Lista de recomendações
-                for pkm in st.session_state.full_pokedex:  # Percorre toda a pokedex
-                    if any(pkm.id == existing.id for existing in team.pokemon):  # Se já está no time, pula
+# ====================== TAB 3 - RECOMENDAÇÕES ======================
+with tab3:
+    st.header("🧠 Recomendações Inteligentes")
+    team = st.session_state.current_team
+    if not team.pokemon:
+        st.warning("Monte um time primeiro para receber sugestões!")
+    else:
+        st.subheader("Sugestões para completar seu time")
+        weaknesses = [w[0] for w in analyze_team_weaknesses(team)]
+        st.write("**Fraquezas detectadas:**", ", ".join(weaknesses[:4]) or "Nenhuma crítica")
+        if st.button("🔍 Gerar Recomendações Inteligentes", type="primary"):
+            with st.spinner("Analisando melhorias..."):
+                recommendations = []
+                for pkm in st.session_state.full_pokedex:
+                    if any(pkm.id == existing.id for existing in team.pokemon):
                         continue
-                    p_types = [t.value for t in pkm.types]  # Tipos do Pokémon
-                    covers_weakness = any(w in p_types for w in weaknesses)  # Verifica se cobre fraqueza
-                    new_type = len(set(p_types) - set(
-                        t.value for p in team.pokemon for t in p.types)) > 0  # Verifica se traz tipo novo
-                    if covers_weakness or new_type:  # Se atende algum critério
-                        recommendations.append(pkm)  # Adiciona
-                    if len(recommendations) >= 6:  # Limita em 6
+                    p_types = [t.value for t in pkm.types]
+                    covers_weakness = any(w in p_types for w in weaknesses)
+                    new_type = len(set(p_types) - set(t.value for p in team.pokemon for t in p.types)) > 0
+                    if covers_weakness or new_type:
+                        recommendations.append(pkm)
+                    if len(recommendations) >= 6:
                         break
-                if not recommendations:  # Se não encontrou nenhuma
-                    recommendations = random.sample(st.session_state.full_pokedex, 6)  # Pega 6 aleatórios
-                st.session_state.last_generated_team = recommendations[:6]  # Salva no session_state
-                st.success("✅ Recomendações geradas!")  # Mensagem
-
-        if st.session_state.last_generated_team:  # Se tem recomendações
-            st.subheader("Pokémon recomendados")  # Título
-            for idx, pkm in enumerate(st.session_state.last_generated_team):  # Para cada recomendação
-                sprite_url = pkm.sprite  # Pega sprite
-                with st.container(border=True):  # Card
-                    cols = st.columns([1, 4, 2])  # Colunas
-                    with cols[0]:  # Imagem
-                        if sprite_url: st.image(sprite_url, width=80)
-                    with cols[1]:  # Info
+                if not recommendations:
+                    recommendations = random.sample(st.session_state.full_pokedex, 6)
+                st.session_state.last_generated_team = recommendations[:6]
+                st.success("✅ Recomendações geradas!")
+        if st.session_state.last_generated_team:
+            st.subheader("Pokémon recomendados")
+            for idx, pkm in enumerate(st.session_state.last_generated_team):
+                sprite_url = pkm.sprite
+                with st.container(border=True):
+                    cols = st.columns([1, 4, 2])
+                    with cols[0]:
+                        if sprite_url:
+                            st.image(sprite_url, width=80)
+                    with cols[1]:
                         st.markdown(f"**{pkm.name}**")
                         tipos = ', '.join(t.value for t in pkm.types)
                         st.caption(f"Tipos: {tipos} | Gen {getattr(pkm, 'generation', '?')}")
-                    with cols[2]:  # Botão adicionar
-                        if st.button("➕ Adicionar", key=f"rec_add_{idx}_{pkm.id}"):  # Botão único
-                            if st.session_state.current_team.add_pokemon(pkm):  # Adiciona
+                    with cols[2]:
+                        if st.button("➕ Adicionar", key=f"rec_add_{idx}_{pkm.id}"):
+                            if st.session_state.current_team.add_pokemon(pkm):
                                 st.success(f"✅ {pkm.name} adicionado!")
-                                st.rerun()  # Recarrega
+                                st.rerun()
                             else:
                                 st.error("❌ Time já está completo!")
 
 # ====================== TAB 4 - GERAR COM IA ======================
-with tab4:  # Aba de geração com IA (filtro simples)
-    st.header("🤖 Gerar Time Completo com IA")  # Título
-    st.caption("Usando pokemon_cleaned_pt.csv + Filtro por Geração + Tipo")  # Legenda
-    user_prompt = st.text_area(  # Campo grande de texto
-        "Descreva o time",
-        placeholder="time de água gen 9",
-        height=100
-    )
-
-    if st.button("🚀 Gerar Time com IA", type="primary", use_container_width=True):  # Botão principal de gerar
-        if not st.session_state.full_pokedex:  # Se pokedex não carregou
+with tab4:
+    st.header("🤖 Gerar Time Completo com IA")
+    st.caption("Usando pokemon_cleaned_pt.csv + Filtro por Geração + Tipo")
+    user_prompt = st.text_area("Descreva o time", placeholder="time de água gen 9", height=100)
+    if st.button("🚀 Gerar Time com IA", type="primary", use_container_width=True):
+        if not st.session_state.full_pokedex:
             st.error("Dataset não carregado!")
             st.stop()
-        if not user_prompt.strip():  # Se não digitou nada
+        if not user_prompt.strip():
             st.error("Digite uma descrição!")
             st.stop()
-        with st.spinner("🔍 Gerando time..."):  # Loading
-            filtered = st.session_state.full_pokedex.copy()  # Copia toda a pokedex
-            gen_filter = extrair_geracao_do_prompt(user_prompt)  # Extrai geração do prompt
-            if gen_filter:  # Se encontrou geração
-                filtered = [p for p in filtered if getattr(p, 'generation', 0) == gen_filter]  # Filtra
-                if len(filtered) == 0:  # Se nada sobrou
-                    filtered = [p for p in st.session_state.full_pokedex if
-                                get_generation_by_id(p.id) == gen_filter]  # Tenta de novo
-                st.success(f"✅ Filtrado para **Gen {gen_filter}** ({len(filtered)} Pokémon)")  # Mensagem
-            prompt_lower = user_prompt.lower()  # Prompt em minúsculo
-            single_type = None  # Variável para tipo
-            for pt, en in pt_to_en.items():  # Procura tipo mencionado
+        with st.spinner("🔍 Gerando time..."):
+            filtered = st.session_state.full_pokedex.copy()
+            gen_filter = extrair_geracao_do_prompt(user_prompt)
+            if gen_filter:
+                filtered = [p for p in filtered if getattr(p, 'generation', 0) == gen_filter]
+            prompt_lower = user_prompt.lower()
+            single_type = None
+            for pt, en in pt_to_en.items():
                 if pt.lower() in prompt_lower:
                     single_type = en
                     break
-            if single_type:  # Se encontrou tipo
-                filtered = [p for p in filtered if any(t.value == single_type for t in p.types)]  # Filtra
-                st.success(f"🔥 Tipo **{single_type}** aplicado ({len(filtered)} Pokémon restantes)")  # Mensagem
-            if len(filtered) < 6:  # Se não tem 6 Pokémon
+            if single_type:
+                filtered = [p for p in filtered if any(t.value == single_type for t in p.types)]
+            if len(filtered) < 6:
                 st.error(f"❌ Só encontrei {len(filtered)} Pokémon. Tente outro filtro!")
                 st.stop()
-            generated = random.sample(filtered, 6)  # Escolhe 6 aleatórios
-            st.session_state.last_generated_team = generated  # Salva
-            st.success(f"✅ Time gerado com sucesso! (Gen {gen_filter or 'qualquer'})")  # Mensagem
-
-    if st.session_state.last_generated_team:  # Exibe o time gerado (fora do if do botão – isso faz o botão funcionar)
-        st.subheader("Seu time gerado pela IA")  # Título
-        for idx, pkm in enumerate(st.session_state.last_generated_team):  # Para cada Pokémon gerado
-            sprite_url = pkm.sprite  # Sprite
-            if not sprite_url or "http" not in str(sprite_url):  # Se sprite não existe ou não é URL
-                try:  # Tenta pegar da PokeAPI
+            generated = random.sample(filtered, 6)
+            st.session_state.last_generated_team = generated
+            st.success(f"✅ Time gerado com sucesso!")
+    if st.session_state.last_generated_team:
+        st.subheader("Seu time gerado pela IA")
+        for idx, pkm in enumerate(st.session_state.last_generated_team):
+            sprite_url = pkm.sprite
+            if not sprite_url or "http" not in str(sprite_url):
+                try:
                     name_lower = pkm.name.lower().replace(" ", "-")
                     r = requests.get(f"https://pokeapi.co/api/v2/pokemon/{name_lower}", timeout=8)
                     if r.status_code == 200:
                         sprite_url = r.json()["sprites"]["front_default"]
                 except:
                     sprite_url = None
-            with st.container(border=True):  # Card
+            with st.container(border=True):
                 cols = st.columns([1, 4, 2])
                 with cols[0]:
-                    if sprite_url: st.image(sprite_url, width=90)
+                    if sprite_url:
+                        st.image(sprite_url, width=90)
                 with cols[1]:
                     st.markdown(f"**{pkm.name}**")
                     tipos = ', '.join(t.value for t in pkm.types) if pkm.types else '—'
                     gen = getattr(pkm, 'generation', '?')
                     st.caption(f"Tipos: {tipos} | Gen {gen}")
                 with cols[2]:
-                    if st.button("➕ Adicionar ao meu time", key=f"add_ia_{idx}_{pkm.id}_{pkm.name}"):  # Botão único
-                        if st.session_state.current_team.add_pokemon(pkm):  # Adiciona
+                    if st.button("➕ Adicionar ao meu time", key=f"add_ia_{idx}_{pkm.id}_{pkm.name}"):
+                        if st.session_state.current_team.add_pokemon(pkm):
                             st.success(f"✅ {pkm.name} adicionado ao seu time!")
                             st.rerun()
                         else:
                             st.error("❌ Time já está completo (máximo 6)!")
 
-# ====================== TAB 5 - MODO IA HÍBRIDO + SIMULADOR ======================
-with tab5:  # Aba híbrida + simulador
-    st.header("🌟 Modo IA Híbrido + Simulador")  # Título
-    team = st.session_state.current_team  # Time atual
-
-    st.subheader("🔄 Geração Híbrida")  # Subtítulo
+# ====================== TAB 5 - HÍBRIDO + SIMULADOR ======================
+with tab5:
+    st.header("🌟 Modo IA Híbrido + Simulador")
+    team = st.session_state.current_team
+    st.subheader("🔄 Geração Híbrida")
     hybrid_prompt = st.text_input("Descreva o estilo do time (ex: ofensivo dragão gen 9)",
-                                  placeholder="ofensivo com dragão")  # Campo de texto
-    if st.button("🧬 Gerar Time Híbrido", type="primary"):  # Botão híbrido
-        with st.spinner("Gerando time híbrido..."):  # Loading
-            filtered = st.session_state.full_pokedex.copy()  # Copia pokedex
-            gen_filter = extrair_geracao_do_prompt(hybrid_prompt)  # Filtra geração
+                                  placeholder="ofensivo com dragão")
+    if st.button("🧬 Gerar Time Híbrido", type="primary"):
+        with st.spinner("Gerando time híbrido..."):
+            filtered = st.session_state.full_pokedex.copy()
+            gen_filter = extrair_geracao_do_prompt(hybrid_prompt)
             if gen_filter:
                 filtered = [p for p in filtered if getattr(p, 'generation', 0) == gen_filter]
             prompt_lower = hybrid_prompt.lower()
@@ -493,29 +606,27 @@ with tab5:  # Aba híbrida + simulador
                     break
             if single_type:
                 filtered = [p for p in filtered if any(t.value == single_type for t in p.types)]
-            generated = random.sample(filtered, min(6, len(filtered)))  # Gera time
-            st.session_state.last_generated_team = generated  # Salva
-            st.success("Time híbrido gerado!")  # Mensagem
-
-    if st.session_state.last_generated_team:  # Exibe sugestão híbrida
+            generated = random.sample(filtered, min(6, len(filtered)))
+            st.session_state.last_generated_team = generated
+            st.success("Time híbrido gerado!")
+    if st.session_state.last_generated_team:
         st.write("**Time sugerido pela IA híbrida:**")
         for pkm in st.session_state.last_generated_team:
-            if st.button(f"➕ {pkm.name}", key=f"hybrid_add_{pkm.id}"):  # Botão adicionar
+            if st.button(f"➕ {pkm.name}", key=f"hybrid_add_{pkm.id}"):
                 if st.session_state.current_team.add_pokemon(pkm):
                     st.success(f"{pkm.name} adicionado!")
                     st.rerun()
                 else:
                     st.error("Time cheio!")
-
-    st.divider()  # Divisória
-    st.subheader("⚔️ Simulador de Batalhas")  # Subtítulo simulador
-    if st.button("🚀 Simular Batalha contra Time Rival"):  # Botão de simulação
-        if not team.pokemon:  # Se time vazio
+    st.divider()
+    st.subheader("⚔️ Simulador de Batalhas")
+    if st.button("🚀 Simular Batalha contra Time Rival"):
+        if not team.pokemon:
             st.error("Monte seu time primeiro!")
         else:
-            rival_team = random.sample(st.session_state.full_pokedex, 6)  # Gera time rival aleatório
-            st.write("**Seu Time** vs **Time Rival**")  # Título
-            col_me, col_rival = st.columns(2)  # Duas colunas
+            rival_team = random.sample(st.session_state.full_pokedex, 6)
+            st.write("**Seu Time** vs **Time Rival**")
+            col_me, col_rival = st.columns(2)
             with col_me:
                 st.subheader("Seu Time")
                 for p in team.pokemon:
@@ -524,11 +635,11 @@ with tab5:  # Aba híbrida + simulador
                 st.subheader("Time Rival")
                 for p in rival_team:
                     st.write(f"• {p.name}")
-            my_score = calculate_synergy_score(team)  # Pontuação do jogador
-            rival_score = random.randint(40, 95)  # Pontuação rival aleatória
-            st.metric("Pontuação do seu time", my_score)  # Mostra métrica
+            my_score = calculate_synergy_score(team)
+            rival_score = random.randint(40, 95)
+            st.metric("Pontuação do seu time", my_score)
             st.metric("Pontuação do rival", rival_score)
-            if my_score > rival_score:  # Resultado
+            if my_score > rival_score:
                 st.success("🏆 VITÓRIA!")
             elif my_score == rival_score:
                 st.info("⚖️ Empate técnico.")
@@ -536,21 +647,21 @@ with tab5:  # Aba híbrida + simulador
                 st.error("❌ Derrota.")
 
 # ====================== EXPORTAÇÃO ======================
-st.divider()  # Linha divisória final
-st.subheader("📤 Exportação Rápida")  # Título de exportação
-team = st.session_state.current_team  # Time atual
-if team.pokemon:  # Se tem Pokémon
-    showdown_text = "\n".join(p.name for p in team.pokemon)  # Texto para Showdown (um nome por linha)
-    col1, col2 = st.columns(2)  # Duas colunas
-    with col1:  # Botão Showdown
+st.divider()
+st.subheader("📤 Exportação Rápida")
+team = st.session_state.current_team
+if team.pokemon:
+    showdown_text = "\n".join(p.name for p in team.pokemon)
+    col1, col2 = st.columns(2)
+    with col1:
         if st.button("📋 Copiar para Pokémon Showdown", use_container_width=True):
-            st.code(showdown_text, language="text")  # Mostra o texto
+            st.code(showdown_text, language="text")
             st.success("✅ Copiado!")
-    with col2:  # Botão PokePaste
+    with col2:
         if st.button("📤 Exportar para PokePaste", use_container_width=True):
             st.success("✅ Pronto para PokePaste!")
             st.code(showdown_text, language="text")
-else:  # Se time vazio
-    st.info("Adicione Pokémon para exportar.")  # Mensagem
+else:
+    st.info("Adicione Pokémon para exportar.")
 
-st.caption("✅ Projeto FINALIZADO - Versão estável e completa!")  # Rodapé final
+st.caption("✅ Projeto FINALIZADO - Versão estável e completa!")
